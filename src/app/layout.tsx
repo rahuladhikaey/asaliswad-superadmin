@@ -32,7 +32,7 @@ export default function RootLayout({
 						__html: `
 							try {
 								const stored = JSON.parse(localStorage.getItem('theme-storage'));
-								if (stored?.state?.dark) document.documentElement.classList.add('dark');
+								if (stored?.state?.dark !== false) document.documentElement.classList.add('dark');
 							} catch (e) {}
 						`,
 					}}

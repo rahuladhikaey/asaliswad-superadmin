@@ -5,7 +5,7 @@ import { ThemeState } from "@/types/theme";
 export const useThemeStore = create<ThemeState>()(
 	persist(
 		(set) => ({
-			dark: false,
+			dark: true,
 			toggle: () => set((state) => ({ dark: !state.dark })),
 			setDark: (value) => set({ dark: value }),
 		}),

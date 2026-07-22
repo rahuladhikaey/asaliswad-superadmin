@@ -411,15 +411,13 @@ export default function AdminPage() {
     setNotifyRequests(notifyData ?? []);
     setStockHistory(historyData ?? []);
 
-    if (applicationError) {
-      console.error("Error loading card applications:", applicationError);
-    } else if (applicationData) {
+    if (applicationData && !applicationError) {
       setApplications(applicationData.map(normalizeCardApplication));
+    } else {
+      setApplications([]);
     }
 
-    if (addressError) {
-      console.error("Error loading user addresses:", addressError);
-    } else if (addressData) {
+    if (addressData && !addressError) {
       const mappedAddresses = addressData.map((a: any) => ({
         id: a.id,
         email: a.user_email,
@@ -431,6 +429,8 @@ export default function AdminPage() {
         addressDetail: a.address_detail,
       }));
       setCustomers(mappedAddresses);
+    } else {
+      setCustomers([]);
     }
 
     if (settingsData) {

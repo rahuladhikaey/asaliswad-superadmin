@@ -100,7 +100,7 @@ export default function AdminLoginPage() {
 									value={username}
 									onChange={(event) => setUsername(event.target.value)}
 									placeholder="••••••••"
-									className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 pl-25 pr-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-text-disabled focus:border-emerald-500/20 focus:bg-white focus:ring-4 focus:ring-emerald-500/5"
+									className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 pl-32 pr-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-text-disabled focus:border-emerald-500/20 focus:bg-white focus:ring-4 focus:ring-emerald-500/5"
 								/>
 							</div>
 							<div className="group relative">
@@ -113,7 +113,7 @@ export default function AdminLoginPage() {
 									value={password}
 									onChange={(event) => setPassword(event.target.value)}
 									placeholder="••••••••"
-									className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 pl-25 pr-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-text-disabled focus:border-emerald-500/20 focus:bg-white focus:ring-4 focus:ring-emerald-500/5"
+									className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 pl-32 pr-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-text-disabled focus:border-emerald-500/20 focus:bg-white focus:ring-4 focus:ring-emerald-500/5"
 								/>
 							</div>
 						</div>

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || "asaliswad_super_admin_jwt_secret_key_2026";
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET || "x9#kL2!pQ8$vN5@mZ1*cJ4^yH7&tR0%bW3";
 const SECRET_KEY = new TextEncoder().encode(JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
