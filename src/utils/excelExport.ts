@@ -549,9 +549,36 @@ export function exportCategoriesExcel(categories: Category[], products: Product[
 
 
 // 10. GENERIC CUSTOM EXPORT FOR FILTERED PREVIEWS
-export function exportCustomDataExcel(title: string, headers: string[], rows: any[][], filename: string, statsInfo?: string[]) {
+export function exportCustomDataExcel(
+	titleOrData: string | Record<string, any>[],
+	headersOrFilename: string[] | string,
+	rows?: any[][],
+	filename?: string,
+	statsInfo?: string[]
+) {
+	if (Array.isArray(titleOrData) && typeof headersOrFilename === "string") {
+		const data = titleOrData;
+		const outFilename = headersOrFilename;
+		if (data.length === 0) {
+			const wb = XLSX.utils.book_new();
+			const ws = XLSX.utils.aoa_to_sheet([["No data available"]]);
+			XLSX.utils.book_append_sheet(wb, ws, "Report");
+			saveWorkbook(wb, outFilename);
+			return;
+		}
+		const headers = Object.keys(data[0]);
+		const rowsData = data.map((item) => headers.map((h) => item[h]));
+		const wb = XLSX.utils.book_new();
+		const ws = createStandardSheet(outFilename.replace(/_/g, " "), headers, rowsData);
+		XLSX.utils.book_append_sheet(wb, ws, outFilename.slice(0, 31));
+		saveWorkbook(wb, outFilename);
+		return;
+	}
+
+	const title = titleOrData as string;
+	const headers = headersOrFilename as string[];
 	const wb = XLSX.utils.book_new();
-	const ws = createStandardSheet(title, headers, rows, statsInfo);
-	XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 31).replace(/[\\\?\*\/\[\]]/g, "")); // sanitize name
-	saveWorkbook(wb, filename);
+	const ws = createStandardSheet(title, headers, rows || [], statsInfo);
+	XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 31).replace(/[\\\?\*\/\[\]]/g, ""));
+	saveWorkbook(wb, filename || "Export");
 }
