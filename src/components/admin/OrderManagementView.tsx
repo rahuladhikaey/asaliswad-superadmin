@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@shared/utils/supabaseClient";
+import { supabaseA as supabase } from "@shared/utils/supabaseClient";
 import { 
   ShoppingBag, 
   Search, 
