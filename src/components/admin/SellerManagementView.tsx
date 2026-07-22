@@ -36,102 +36,24 @@ export default function SellerManagementView() {
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"directory" | "logs">("directory");
 
-  // Activity logs mock / DB fallback
-  const [logs, setLogs] = useState<any[]>([
-    { id: 1, seller: "Pure Spices & Honey Traders", action: "Submitted onboarding application", timestamp: new Date(Date.now() - 3600000).toLocaleString(), type: "info" },
-    { id: 2, seller: "Himalayan Herbs Enterprise", action: "Approved seller account", timestamp: new Date(Date.now() - 86400000).toLocaleString(), type: "success" },
-    { id: 3, seller: "Organic Valley Foods", action: "Updated pickup location address", timestamp: new Date(Date.now() - 172800000).toLocaleString(), type: "warning" },
-  ]);
-
-  const DEFAULT_SEED_SELLERS = [
-    {
-      id: "seller-101",
-      user_id: "user-101",
-      business_name: "Pure Spices & Honey Traders",
-      owner_name: "Rahul Adhikari",
-      mobile_number: "+91 9876543210",
-      email: "rahuladhikaey180@gmail.com",
-      pickup_address: "Plot 42, Spice Industrial Zone, MIDC",
-      warehouse_address: "Plot 42, Spice Industrial Zone, MIDC",
-      city: "Nagpur",
-      state: "Maharashtra",
-      pincode: "440001",
-      status: "pending",
-      created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-      gstin: "27AAACP1234F1Z5",
-      pan: "AAACP1234F"
-    },
-    {
-      id: "seller-102",
-      user_id: "user-102",
-      business_name: "Himalayan Organic Teas & Herbs",
-      owner_name: "Priya Sharma",
-      mobile_number: "+91 9123456789",
-      email: "priya@himalayanorganics.in",
-      pickup_address: "Estate 14, Tea Gardens Road",
-      warehouse_address: "Estate 14, Tea Gardens Road",
-      city: "Darjeeling",
-      state: "West Bengal",
-      pincode: "734101",
-      status: "approved",
-      created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-      gstin: "19BBBCP5678G2Z6",
-      pan: "BBBCP5678G"
-    },
-    {
-      id: "seller-103",
-      user_id: "user-103",
-      business_name: "Desi Ghee & Agro Products",
-      owner_name: "Vikram Singh",
-      mobile_number: "+91 9988776655",
-      email: "vikram@desighee.com",
-      pickup_address: "Farm 8, Gwalior Bypass",
-      warehouse_address: "Farm 8, Gwalior Bypass",
-      city: "Gwalior",
-      state: "Madhya Pradesh",
-      pincode: "474001",
-      status: "pending",
-      created_at: new Date(Date.now() - 3600000 * 5).toISOString(),
-      gstin: "23CCCDP9012H3Z7",
-      pan: "CCCDP9012H"
-    }
-  ];
+  // Activity audit logs
+  const [logs, setLogs] = useState<any[]>([]);
 
   const loadSellers = async () => {
     setLoading(true);
     try {
-      let fetched: any[] = [];
       const { data, error } = await supabase
         .from("sellers")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        fetched = data;
+      if (error) {
+        console.error("Database query notice for sellers:", error);
       }
-
-      // Merge local storage seller applications
-      let localSellers: any[] = [];
-      try {
-        const pendingLocal = JSON.parse(localStorage.getItem("asali_swad_pending_sellers") || "[]");
-        const allLocal = JSON.parse(localStorage.getItem("asali_swad_all_sellers") || "[]");
-        localSellers = [...pendingLocal, ...allLocal];
-      } catch (e) {}
-
-      // Combine fetched, local, and default seed sellers without duplicates
-      const map = new Map<string, any>();
-      [...fetched, ...localSellers, ...DEFAULT_SEED_SELLERS].forEach(s => {
-        const key = s.id || s.user_id || s.email;
-        if (key && !map.has(key)) {
-          map.set(key, s);
-        }
-      });
-
-      const combined = Array.from(map.values());
-      setSellers(combined);
+      setSellers(data || []);
     } catch (e: any) {
-      console.error("Error loading sellers:", e);
-      setSellers(DEFAULT_SEED_SELLERS);
+      console.error("Error loading sellers from database:", e);
+      setSellers([]);
     } finally {
       setLoading(false);
     }
@@ -147,33 +69,28 @@ export default function SellerManagementView() {
       const payload: any = { status: newStatus, updated_at: new Date().toISOString() };
       if (reason !== undefined) payload.rejection_reason = reason;
 
-      try {
-        await supabase
-          .from("sellers")
-          .update(payload)
-          .eq("id", sellerId);
-      } catch (dbErr) {
-        console.warn("Supabase seller update notice:", dbErr);
+      const { error } = await supabase
+        .from("sellers")
+        .update(payload)
+        .eq("id", sellerId);
+
+      if (error) {
+        console.error("Supabase update seller status error:", error);
+        alert(`Failed to update seller status in database: ${error.message}`);
+        setActioningId(null);
+        return;
       }
 
-      // Update local state and localStorage
-      const updatedSellers = sellers.map(s => (s.id === sellerId || s.user_id === sellerId) ? { ...s, ...payload } : s);
-      setSellers(updatedSellers);
-      try {
-        localStorage.setItem("asali_swad_all_sellers", JSON.stringify(updatedSellers));
-      } catch (e) {}
+      // Reload fresh real data from database
+      await loadSellers();
 
-      if (selectedSeller && (selectedSeller.id === sellerId || selectedSeller.user_id === sellerId)) {
-        setSelectedSeller({ ...selectedSeller, ...payload });
-      }
-
-      // Add audit log
+      // Add audit log entry
       const targetSeller = sellers.find(s => s.id === sellerId || s.user_id === sellerId);
       setLogs(prev => [
         {
           id: Date.now(),
-          seller: targetSeller?.business_name || "Unknown Seller",
-          action: `Status updated to ${newStatus.toUpperCase()}${reason ? `: ${reason}` : ''}`,
+          seller: targetSeller?.business_name || "Seller",
+          action: `Status changed to ${newStatus.toUpperCase()}${reason ? `: ${reason}` : ''}`,
           timestamp: new Date().toLocaleString(),
           type: newStatus === "approved" ? "success" : newStatus === "rejected" ? "error" : "warning"
         },
@@ -184,7 +101,8 @@ export default function SellerManagementView() {
       setRejectionReason("");
       setTargetSellerId(null);
     } catch (err: any) {
-      console.error("Failed to update status:", err);
+      console.error("Failed to update seller status:", err);
+      alert(err.message || "Failed to update seller status.");
     }
     setActioningId(null);
   };
