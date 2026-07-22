@@ -24,6 +24,6 @@ export const apiService = {
   // Store Settings & Shipments
   getStoreSettings: () => apiFetch('/api/admin/store-settings'),
   updateStoreSetting: (key: string, value: any) => apiFetch('/api/admin/store-settings', { method: 'POST', body: JSON.stringify({ key, value }) }),
-  createShipment: (shipmentData: any) => apiFetch('/api/shipments/create-shipment', { method: 'POST', body: JSON.stringify(shipmentData) }),
-  getNotifyRequests: () => apiFetch('/api/admin/notify-requests'),
+  // Media Upload (Supabase A Storage Bucket -> Supabase A)
+  uploadBrandingAsset: (fileName: string, fileBufferBase64: string, mimeType?: string) => apiFetch('/api/uploads/admin-branding-asset', { method: 'POST', body: JSON.stringify({ fileName, fileBufferBase64, mimeType }) }),
 };
