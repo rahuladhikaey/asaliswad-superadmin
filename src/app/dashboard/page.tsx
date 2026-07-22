@@ -385,24 +385,33 @@ export default function AdminPage() {
 
   const fetchData = async () => {
     setLoading(true);
+    const safeFetch = async (promise: PromiseLike<any>) => {
+      try {
+        const res = await promise;
+        return res?.data ?? [];
+      } catch (e) {
+        return [];
+      }
+    };
+
     const [
-      { data: productData },
-      { data: categoryData },
-      { data: orderData },
-      { data: applicationData, error: applicationError },
-      { data: addressData, error: addressError },
-      { data: settingsData },
-      { data: notifyData },
-      { data: historyData }
+      productData,
+      categoryData,
+      orderData,
+      applicationData,
+      addressData,
+      settingsData,
+      notifyData,
+      historyData
     ] = await Promise.all([
-      supabase.from("products").select("*").order("id", { ascending: false }),
-      supabase.from("categories").select("*").order("name", { ascending: true }),
-      supabase.from("orders").select("*").order("created_at", { ascending: false }),
-      supabase.from("card_applications").select("*").order("applied_at", { ascending: false }),
-      supabase.from("user_addresses").select("*").order("saved_at", { ascending: false }),
-      supabase.from("store_settings").select("*"),
-      supabase.from("notify_requests").select("*").order("created_at", { ascending: false }),
-      supabase.from("stock_history").select("*, products(name)").order("created_at", { ascending: false })
+      safeFetch(supabase.from("products").select("*").order("id", { ascending: false })),
+      safeFetch(supabase.from("categories").select("*").order("name", { ascending: true })),
+      safeFetch(supabase.from("orders").select("*").order("created_at", { ascending: false })),
+      safeFetch(supabase.from("card_applications").select("*").order("applied_at", { ascending: false })),
+      safeFetch(supabase.from("user_addresses").select("*").order("saved_at", { ascending: false })),
+      safeFetch(supabase.from("store_settings").select("*")),
+      safeFetch(supabase.from("notify_requests").select("*").order("created_at", { ascending: false })),
+      safeFetch(supabase.from("stock_history").select("*, products(name)").order("created_at", { ascending: false }))
     ]);
 
     setProducts((productData ?? []) as Product[]);
@@ -411,13 +420,13 @@ export default function AdminPage() {
     setNotifyRequests(notifyData ?? []);
     setStockHistory(historyData ?? []);
 
-    if (applicationData && !applicationError) {
+    if (Array.isArray(applicationData)) {
       setApplications(applicationData.map(normalizeCardApplication));
     } else {
       setApplications([]);
     }
 
-    if (addressData && !addressError) {
+    if (Array.isArray(addressData)) {
       const mappedAddresses = addressData.map((a: any) => ({
         id: a.id,
         email: a.user_email,
