@@ -126,7 +126,8 @@ export default function SellerManagementView() {
   };
 
   const filteredSellers = sellers.filter(s => {
-    const matchesStatus = filterStatus === "all" || s.status === filterStatus;
+    const sellerStatus = (s.status || "pending").toLowerCase();
+    const matchesStatus = filterStatus === "all" || sellerStatus === filterStatus.toLowerCase();
     const matchesSearch = 
       s.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.owner_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -137,10 +138,10 @@ export default function SellerManagementView() {
 
   const counts = {
     all: sellers.length,
-    pending: sellers.filter(s => s.status === "pending").length,
-    approved: sellers.filter(s => s.status === "approved").length,
-    rejected: sellers.filter(s => s.status === "rejected").length,
-    suspended: sellers.filter(s => s.status === "suspended").length,
+    pending: sellers.filter(s => (s.status || "").toLowerCase() === "pending").length,
+    approved: sellers.filter(s => (s.status || "").toLowerCase() === "approved").length,
+    rejected: sellers.filter(s => (s.status || "").toLowerCase() === "rejected").length,
+    suspended: sellers.filter(s => (s.status || "").toLowerCase() === "suspended").length,
   };
 
   return (
