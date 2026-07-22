@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@shared/utils/supabaseClient";
+import { supabaseA, supabaseB } from "@shared/utils/supabaseClient";
 import { MapPin, Truck, CheckCircle2, AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
 
 export default function ShippingLogisticsView() {
@@ -12,10 +12,10 @@ export default function ShippingLogisticsView() {
   const loadShippingData = async () => {
     setLoading(true);
     try {
-      const { data: locations } = await supabase.from("seller_pickup_locations").select("*");
+      const { data: locations } = await supabaseB.from("seller_pickup_locations").select("*");
       setPickupLocations(locations || []);
 
-      const { data: orders } = await supabase
+      const { data: orders } = await supabaseA
         .from("orders")
         .select("*")
         .not("shipment_id", "is", null);
