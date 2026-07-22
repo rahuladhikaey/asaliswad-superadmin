@@ -89,31 +89,31 @@ export default function AdminLoginPage() {
 					</div>
 
 					<form className="w-full space-y-6" onSubmit={handleAccessSubmit}>
-						<div className="space-y-4">
-							<div className="group relative">
-								<span className="absolute left-6 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-text-muted group-focus-within:text-primary transition-colors duration-150">
+						<div className="space-y-5">
+							<div className="space-y-1.5 text-left">
+								<label className="block text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
 									Username
-								</span>
+								</label>
 								<input
 									type="text"
 									required
 									value={username}
 									onChange={(event) => setUsername(event.target.value)}
-									placeholder="••••••••"
-									className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 pl-32 pr-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-text-disabled focus:border-emerald-500/20 focus:bg-white focus:ring-4 focus:ring-emerald-500/5"
+									placeholder="Enter your username"
+									className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/10 shadow-sm"
 								/>
 							</div>
-							<div className="group relative">
-								<span className="absolute left-6 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-text-muted group-focus-within:text-primary transition-colors duration-150">
+							<div className="space-y-1.5 text-left">
+								<label className="block text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
 									Password
-								</span>
+								</label>
 								<input
 									type="password"
 									required
 									value={password}
 									onChange={(event) => setPassword(event.target.value)}
-									placeholder="••••••••"
-									className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 pl-32 pr-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-text-disabled focus:border-emerald-500/20 focus:bg-white focus:ring-4 focus:ring-emerald-500/5"
+									placeholder="Enter your password"
+									className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/10 shadow-sm"
 								/>
 							</div>
 						</div>
