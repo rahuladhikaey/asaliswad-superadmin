@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabaseB as supabase } from "@shared/utils/supabaseClient";
+import { supabase } from "@shared/utils/supabaseClient";
 import { 
   Building2, 
   CheckCircle2, 
