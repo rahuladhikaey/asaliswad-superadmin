@@ -79,6 +79,18 @@ export default function SellerManagementView() {
 
   useEffect(() => {
     loadData();
+
+    // Supabase Realtime WebSockets for zero-refresh auto-update
+    const channel = supabase
+      .channel("admin-seller-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sellers" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => loadData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleUpdateStatus = async (sellerId: string, newStatus: string, reason?: string) => {

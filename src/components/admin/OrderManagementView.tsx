@@ -43,6 +43,16 @@ export default function OrderManagementView() {
 
   useEffect(() => {
     loadOrders();
+
+    // Supabase Realtime WebSockets for zero-refresh order monitoring
+    const channel = supabase
+      .channel("admin-orders-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => loadOrders())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleUpdateOrderStatus = async (orderId: string | number, newStatus: string) => {
