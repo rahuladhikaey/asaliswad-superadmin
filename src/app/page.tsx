@@ -1,17 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Logo from "@/assets/images/official-logo.png";
 import Image from "next/image";
-import BG from "@/assets/svgs/bg.svg";
-import BGDark from "@/assets/svgs/bg-dark.svg";
-import { DarkModeToggle } from "@/components/DarkModeToggle";
-import { useThemeStore } from "@/store/theme";
 
 export default function AdminLoginPage() {
-	const dark = useThemeStore((state) => state.dark);
-	const router = useRouter();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [authError, setAuthError] = useState("");
@@ -33,11 +26,9 @@ export default function AdminLoginPage() {
 			});
 			const data = await res.json();
 			if (res.ok && data.success) {
-				// Use window.location.href instead of router.push to bypass Next.js client-side cache
-				// which might have cached the previous redirect from /admin to /admin/login
 				window.location.href = "/dashboard";
 			} else {
-				setAuthError(data.message || "Incorrect admin keys.");
+				setAuthError(data.message || "Incorrect admin credentials.");
 			}
 		} catch (error) {
 			setAuthError("Server error. Please try again.");
@@ -46,52 +37,35 @@ export default function AdminLoginPage() {
 	};
 
 	return (
-		<main className="relative min-h-screen flex items-center justify-center p-4 text-slate-900 overflow-hidden">
-			<>
-				<BG
-					className={`fixed inset-0 w-screen h-screen -z-10 transition-opacity duration-500 ${
-						dark ? "opacity-0" : "opacity-100"
-					}`}
-					preserveAspectRatio="xMidYMid slice"
-				/>
-				<BGDark
-					className={`fixed inset-0 w-screen h-screen -z-10 transition-opacity duration-500 ${
-						dark ? "opacity-100" : "opacity-0"
-					}`}
-					preserveAspectRatio="xMidYMid slice"
-				/>
-			</>
-			<div className="absolute top-10 right-10" >
-				<DarkModeToggle/>
-			</div>
-			<section className="w-full max-w-lg">
-				<div className="rounded-[3rem] bg-foreground/[0.15] p-10 backdrop-blur-xl md:p-14 premium-shadow flex flex-col items-center">
-					<div className="mb-10 transition-transform hover:scale-110 duration-500">
+		<main className="min-h-screen flex items-center justify-center p-4 bg-slate-950 text-white">
+			<section className="w-full max-w-md">
+				<div className="rounded-2xl bg-slate-900 border border-slate-800 p-8 shadow-xl flex flex-col items-center">
+					<div className="mb-6">
 						<a href="https://asaliswad.com">
 							<Image
 								src={Logo}
 								alt="Asali Swad Admin"
-								className="h-24 w-24 rounded-[50%] object-cover shadow-2xl border-4 border-white"
+								className="h-16 w-16 rounded-full object-cover border border-slate-700"
 							/>
 						</a>
 					</div>
 
-					<div className="text-center mb-8 md:mb-10">
-						<span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-primary">
-							Secure Entry
+					<div className="text-center mb-8">
+						<span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+							Super Admin Portal
 						</span>
-						<h1 className="mt-2 text-2xl md:text-3xl font-black tracking-tight text-foreground">
-							Admin Panel
+						<h1 className="mt-1 text-2xl font-bold tracking-tight text-white">
+							Admin Login
 						</h1>
-						<p className="mt-2 md:mt-3 text-[11px] md:text-sm font-bold text-text-secondary">
-							Exclusive access for spice masters.
+						<p className="mt-1 text-xs text-slate-400">
+							Enter your credentials to access system management.
 						</p>
 					</div>
 
-					<form className="w-full space-y-6" onSubmit={handleAccessSubmit}>
-						<div className="space-y-5">
-							<div className="space-y-1.5 text-left">
-								<label className="block text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+					<form className="w-full space-y-4" onSubmit={handleAccessSubmit}>
+						<div className="space-y-4">
+							<div className="space-y-1 text-left">
+								<label className="block text-xs font-semibold text-slate-300">
 									Username
 								</label>
 								<input
@@ -99,12 +73,13 @@ export default function AdminLoginPage() {
 									required
 									value={username}
 									onChange={(event) => setUsername(event.target.value)}
-									placeholder="Enter your username"
-									className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/10 shadow-sm"
+									placeholder="Enter admin username"
+									className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm font-medium text-white outline-none placeholder:text-slate-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
 								/>
 							</div>
-							<div className="space-y-1.5 text-left">
-								<label className="block text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+
+							<div className="space-y-1 text-left">
+								<label className="block text-xs font-semibold text-slate-300">
 									Password
 								</label>
 								<input
@@ -112,40 +87,35 @@ export default function AdminLoginPage() {
 									required
 									value={password}
 									onChange={(event) => setPassword(event.target.value)}
-									placeholder="Enter your password"
-									className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/10 shadow-sm"
+									placeholder="••••••••••••"
+									className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm font-medium text-white outline-none placeholder:text-slate-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
 								/>
 							</div>
 						</div>
 
 						{authError ? (
-							<div className="flex items-center gap-3 rounded-2xl bg-rose-50 p-4 border border-rose-100/50">
-								<p className="text-xs font-bold text-rose-700 leading-snug">
-									{authError}
-								</p>
+							<div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-800/80 text-xs font-medium text-rose-300">
+								{authError}
 							</div>
 						) : null}
 
 						<button
 							type="submit"
 							disabled={loading}
-							className="flex h-14 w-full items-center justify-center rounded-2xl bg-primary text-sm font-black uppercase tracking-widest text-white shadow-xl shadow-emerald-600/30 transition-all duration-300 hover:opacity-[0.75] active:scale-95 disabled:opacity-50"
+							className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold text-white transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer shadow-md"
 						>
-							{loading ? "Authenticating..." : "Authenticate Access"}
+							{loading ? "Authenticating..." : "Log In"}
 						</button>
-
-
 					</form>
 
-					<div className="mt-8 text-center">
+					<div className="mt-6 text-center border-t border-slate-800/80 pt-5 w-full">
 						<a
 							href="https://asaliswad.com"
-							className="text-[10px] font-black uppercase tracking-[0.25em] text-text-muted hover:text-primary transition-colors duration-300"
+							className="text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors"
 						>
-							Return to Public Store
+							← Return to Storefront
 						</a>
 					</div>
-
 				</div>
 			</section>
 		</main>

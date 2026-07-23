@@ -550,6 +550,17 @@ export function exportCategoriesExcel(categories: Category[], products: Product[
 
 // 10. GENERIC CUSTOM EXPORT FOR FILTERED PREVIEWS
 export function exportCustomDataExcel(
+	data: Record<string, any>[],
+	filename: string
+): void;
+export function exportCustomDataExcel(
+	title: string,
+	headers: string[],
+	rows: any[][],
+	filename?: string,
+	statsInfo?: string[]
+): void;
+export function exportCustomDataExcel(
 	titleOrData: string | Record<string, any>[],
 	headersOrFilename: string[] | string,
 	rows?: any[][],

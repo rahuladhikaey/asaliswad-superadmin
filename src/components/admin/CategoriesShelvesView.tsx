@@ -210,7 +210,14 @@ export default function CategoriesShelvesView() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-sm">
-                      {getCategoryIcon ? getCategoryIcon(c.name) : "🌿"}
+                      {(() => {
+                        const icon = getCategoryIcon(c.name);
+                        return icon.type === "image" ? (
+                          <img src={icon.value} alt={c.name} className="w-6 h-6 object-contain" />
+                        ) : (
+                          <span>{icon.value}</span>
+                        );
+                      })()}
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-slate-900 dark:text-white">{c.name}</h4>
