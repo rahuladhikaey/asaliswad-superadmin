@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { 
-  AlertTriangle, 
-  Bell, 
-  History, 
-  Package, 
-  Search, 
-  RefreshCw, 
-  ArrowUpRight, 
+import {
+  AlertTriangle,
+  Bell,
+  History,
+  Package,
+  Search,
+  RefreshCw,
+  ArrowUpRight,
   CheckCircle2,
   Mail,
   User,
@@ -32,7 +32,7 @@ export default function StockAlertsView() {
         .from("products")
         .select("*")
         .order("stock", { ascending: true });
-      
+
       setProducts(pData || []);
 
       // 2. Load stock notify requests (or local storage fallback)
@@ -103,25 +103,22 @@ export default function StockAlertsView() {
         <div className="flex items-center bg-black/20 backdrop-blur-md p-1 rounded-xl border border-white/10 shrink-0">
           <button
             onClick={() => setActiveTab("critical")}
-            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
-              activeTab === "critical" ? "bg-white text-slate-900 shadow-sm" : "text-rose-100 hover:text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === "critical" ? "bg-white text-slate-900 shadow-sm" : "text-rose-100 hover:text-white"
+              }`}
           >
             Critical Stock ({criticalProducts.length})
           </button>
           <button
             onClick={() => setActiveTab("notify")}
-            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
-              activeTab === "notify" ? "bg-white text-slate-900 shadow-sm" : "text-rose-100 hover:text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === "notify" ? "bg-white text-slate-900 shadow-sm" : "text-rose-100 hover:text-white"
+              }`}
           >
             Notify Requests ({notifyRequests.length})
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
-              activeTab === "history" ? "bg-white text-slate-900 shadow-sm" : "text-rose-100 hover:text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === "history" ? "bg-white text-slate-900 shadow-sm" : "text-rose-100 hover:text-white"
+              }`}
           >
             History Log
           </button>
@@ -163,24 +160,22 @@ export default function StockAlertsView() {
                 return (
                   <div
                     key={p.id}
-                    className={`bg-white dark:bg-slate-900 rounded-2xl p-5 border shadow-sm flex flex-col justify-between space-y-4 ${
-                      isOutOfStock ? "border-rose-300 dark:border-rose-900/60" : "border-amber-300 dark:border-amber-900/60"
-                    }`}
+                    className={`bg-white dark:bg-slate-900 rounded-2xl p-5 border shadow-sm flex flex-col justify-between space-y-4 ${isOutOfStock ? "border-rose-300 dark:border-rose-900/60" : "border-amber-300 dark:border-amber-900/60"
+                      }`}
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
-                          isOutOfStock
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${isOutOfStock
                             ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400"
                             : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
-                        }`}>
+                          }`}>
                           {isOutOfStock ? "Out of Stock" : "Low Stock Alert"}
                         </span>
                         <span className="text-xs font-mono text-slate-400">SKU: {p.sku || p.id}</span>
                       </div>
 
                       <h4 className="font-bold text-sm text-slate-900 dark:text-white line-clamp-1">{p.name}</h4>
-                      
+
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold">
                         <span className="text-slate-400">Current Units:</span>
                         <span className={`font-black text-sm ${isOutOfStock ? "text-rose-600" : "text-amber-600"}`}>
