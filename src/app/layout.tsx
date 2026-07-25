@@ -12,8 +12,8 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 export const metadata = {
-	title: "Admin Panel",
-	description: "Asali Swad Admin Panel",
+	title: "Super Admin Panel - Asali Swad",
+	description: "Management Dashboard for Asali Swad Spices & Groceries",
 };
 export default function RootLayout({
 	children,
@@ -24,21 +24,9 @@ export default function RootLayout({
 		<html
 			lang="en"
 			suppressHydrationWarning
-			className={`${geistMono.variable} ${outfit.variable} h-full antialiased`}
+			className={`${geistMono.variable} ${outfit.variable} h-full antialiased light`}
 		>
-			<head>
-				<script
-					dangerouslySetInnerHTML={{
-						__html: `
-							try {
-								const stored = JSON.parse(localStorage.getItem('theme-storage'));
-								if (stored?.state?.dark !== false) document.documentElement.classList.add('dark');
-							} catch (e) {}
-						`,
-					}}
-				/>
-			</head>
-			<body className="min-h-full font-sans overflow-x-hidden">
+			<body className="min-h-full font-sans overflow-x-hidden bg-slate-50 text-slate-900">
 				<ThemeSync />
 				{children}
 			</body>
