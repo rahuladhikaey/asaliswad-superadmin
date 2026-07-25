@@ -41,11 +41,12 @@ export default function CategoriesShelvesView() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Check local cache first
+      let cached: any[] = [];
       const storedCats = typeof window !== "undefined" ? localStorage.getItem("asali_swad_categories_cache") : null;
       if (storedCats) {
         try {
-          setCategories(JSON.parse(storedCats));
+          cached = JSON.parse(storedCats);
+          if (cached && cached.length > 0) setCategories(cached);
         } catch (e) {
           console.error(e);
         }
@@ -60,6 +61,17 @@ export default function CategoriesShelvesView() {
         setCategories(cRes.data);
         if (typeof window !== "undefined") {
           localStorage.setItem("asali_swad_categories_cache", JSON.stringify(cRes.data));
+        }
+      } else if (cached && cached.length > 0) {
+        // Auto-sync cached categories (e.g. Urad Dal) into Supabase DB if DB is currently empty
+        console.log("DB empty, auto-syncing cached categories to Supabase DB...");
+        const cleanPayload = cached.map(({ id, ...rest }) => rest);
+        const { data: syncedData } = await supabase.from("categories").insert(cleanPayload).select();
+        if (syncedData && syncedData.length > 0) {
+          setCategories(syncedData);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("asali_swad_categories_cache", JSON.stringify(syncedData));
+          }
         }
       }
       setProducts(pRes.data || []);
