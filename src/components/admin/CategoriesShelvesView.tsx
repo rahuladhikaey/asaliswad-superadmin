@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabaseB as supabase } from "@shared/utils/supabaseClient";
+import { syncCategoryToCustomerDb } from "@shared/utils/dualDatabaseSync";
 import { 
   Plus, 
   Edit2, 
@@ -171,6 +172,9 @@ export default function CategoriesShelvesView() {
         } else {
           savedCategory = data?.[0];
         }
+        if (savedCategory) {
+          await syncCategoryToCustomerDb(savedCategory, 'upsert');
+        }
         setStatusMessage(`✨ New subcategory "${categoryName.trim()}" created under ${mainCategory}!`);
       }
 
@@ -206,6 +210,7 @@ export default function CategoriesShelvesView() {
     setActioningId(categoryId);
     try {
       await supabase.from("categories").delete().eq("id", categoryId);
+      await syncCategoryToCustomerDb({ id: categoryId }, 'delete');
       const updated = categories.filter((c) => c.id !== categoryId);
       setCategories(updated);
       if (typeof window !== "undefined") {

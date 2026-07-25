@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabaseA as supabase } from "@shared/utils/supabaseClient";
+import { syncProductToCustomerDb } from "@shared/utils/dualDatabaseSync";
 import { 
   Package, 
   CheckCircle2, 
@@ -46,17 +47,22 @@ export default function ProductApprovalView() {
   const handleUpdateProductStatus = async (productId: string | number, updates: any) => {
     setActioningId(productId);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("products")
         .update(updates)
-        .eq("id", productId);
+        .eq("id", productId)
+        .select();
 
       if (error) throw error;
 
-      setProducts(products.map(p => p.id === productId ? { ...p, ...updates } : p));
+      const updatedObj = data?.[0] || { ...products.find(p => p.id === productId), ...updates };
+      setProducts(products.map(p => p.id === productId ? updatedObj : p));
       if (selectedProduct?.id === productId) {
-        setSelectedProduct({ ...selectedProduct, ...updates });
+        setSelectedProduct(updatedObj);
       }
+
+      // Automatically sync changes to Customer DB B
+      await syncProductToCustomerDb(updatedObj, 'upsert');
     } catch (err: any) {
       alert(err.message || "Failed to update product.");
     }
@@ -73,6 +79,9 @@ export default function ProductApprovalView() {
 
       setProducts(products.filter(p => p.id !== productId));
       if (selectedProduct?.id === productId) setSelectedProduct(null);
+
+      // Automatically remove from Customer DB B
+      await syncProductToCustomerDb({ id: productId }, 'delete');
     } catch (err: any) {
       alert(err.message || "Failed to delete product.");
     }
