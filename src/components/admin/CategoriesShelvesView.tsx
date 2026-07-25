@@ -140,39 +140,36 @@ export default function CategoriesShelvesView() {
           .eq("id", editingCategoryId)
           .select();
 
-        if (error) console.warn("Supabase update notice:", error);
+        if (error) throw error;
         savedCategory = data?.[0] || { id: editingCategoryId, ...payload };
         setStatusMessage(`✅ Subcategory "${categoryName.trim()}" updated successfully.`);
       } else {
-        const newId = Date.now();
+        // Omit custom id so PostgreSQL auto-generates sequential integer primary key
         const { data, error } = await supabase
           .from("categories")
-          .insert([{ ...payload, id: newId }])
+          .insert([payload])
           .select();
 
-        if (error) console.warn("Supabase insert notice:", error);
-        savedCategory = data?.[0] || { id: newId, ...payload };
+        if (error) {
+          console.warn("Primary insert error, retrying without select:", error);
+          const { error: retryError } = await supabase
+            .from("categories")
+            .insert([payload]);
+          if (retryError) throw retryError;
+        } else {
+          savedCategory = data?.[0];
+        }
         setStatusMessage(`✨ New subcategory "${categoryName.trim()}" created under ${mainCategory}!`);
       }
 
-      // Update local state and localStorage immediately
-      const updatedCats = editingCategoryId
-        ? categories.map(c => (c.id === editingCategoryId ? { ...c, ...savedCategory } : c))
-        : [...categories, savedCategory];
-
-      setCategories(updatedCats);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("asali_swad_categories_cache", JSON.stringify(updatedCats));
-      }
-
-      // Reset Form
+      loadData();
       setCategoryName("");
       setImagePreview("");
       setImageSizeNotice("");
       setEditingCategoryId(null);
     } catch (e: any) {
-      console.error("Error saving category:", e);
-      setStatusMessage(`✅ Category saved locally.`);
+      console.error("Error saving category to database:", e);
+      alert(`❌ Database Error: ${e.message || "Could not save category"}`);
     }
   };
 
