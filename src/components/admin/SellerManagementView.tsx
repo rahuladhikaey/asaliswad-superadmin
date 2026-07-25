@@ -635,6 +635,60 @@ export default function SellerManagementView() {
                 </div>
               </div>
 
+              <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-black flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    FSSAI Food Safety License
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                    selectedSeller.fssai_status === "Verified" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300" :
+                    selectedSeller.fssai_status === "Pending Verification" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300" :
+                    selectedSeller.fssai_status === "Rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300" :
+                    "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  }`}>
+                    {selectedSeller.fssai_status || "Not Submitted"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-slate-900 dark:text-white">
+                  <div>
+                    <span className="text-[9px] text-slate-400 block font-semibold">License Number</span>
+                    <p className="font-mono text-xs font-black">{selectedSeller.fssai_license_number || "Not Provided"}</p>
+                  </div>
+                  {selectedSeller.fssai_certificate_url && (
+                    <a
+                      href={selectedSeller.fssai_certificate_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-colors"
+                    >
+                      View Certificate 📄
+                    </a>
+                  )}
+                </div>
+
+                {/* Quick FSSAI Approval Action Buttons */}
+                <div className="pt-2 flex items-center gap-2 border-t border-emerald-200/50 dark:border-emerald-800/50">
+                  <button
+                    type="button"
+                    onClick={() => handleFssaiAction(selectedSeller.id, "Verified")}
+                    disabled={actioningId === selectedSeller.id}
+                    className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                  >
+                    ✓ Approve FSSAI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFssaiAction(selectedSeller.id, "Rejected", "Invalid document or expired license")}
+                    disabled={actioningId === selectedSeller.id}
+                    className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                  >
+                    ✕ Reject FSSAI
+                  </button>
+                </div>
+              </div>
+
               <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 text-amber-900 dark:text-amber-300">
                 <span className="text-[10px] uppercase font-black">GST Document Status</span>
                 <p className="text-xs font-bold mt-0.5">
