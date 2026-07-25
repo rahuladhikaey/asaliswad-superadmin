@@ -29,7 +29,7 @@ type SettlementRecord = {
   upi_id: string;
   payment_method: string;
   utr_number: string;
-  status: 'PENDING' | 'PAID' | 'REJECTED';
+  status: 'PENDING' | 'PAID' | 'REJECTED' | 'COMPLETED' | string;
   paid_at: string;
   created_at: string;
   notes?: string;
@@ -59,19 +59,23 @@ export default function PaymentsCommissionView() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [oRes, sRes, setRes] = await Promise.all([
+      const [oRes, sRes, setRes, settingsRes] = await Promise.all([
         supabase.from("orders").select("*"),
         supabase.from("sellers").select("*"),
-        supabase.from("seller_settlements").select("*").order("created_at", { ascending: false })
+        supabase.from("seller_settlements").select("*").order("created_at", { ascending: false }),
+        supabase.from("store_settings").select("value").eq("key", "marketplace_rules").maybeSingle()
       ]);
 
       setOrders(oRes.data || []);
       setSellers(sRes.data || []);
 
+      if (settingsRes?.data?.value?.globalCommissionPct) {
+        setCommissionRate(Number(settingsRes.data.value.globalCommissionPct));
+      }
+
       if (!setRes.error && setRes.data) {
         setSettlements(setRes.data);
       } else {
-        // LocalStorage fallback for settlements if table not yet created
         const storedSets = localStorage.getItem("asali_swad_all_seller_settlements");
         if (storedSets) {
           try {
@@ -90,36 +94,68 @@ export default function PaymentsCommissionView() {
 
   useEffect(() => {
     loadData();
+
+    // Supabase Realtime channel for instant settlement updates
+    const channel = supabase
+      .channel("admin-settlements-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "seller_settlements" }, () => loadData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Calculate gross metrics
   const totalGMV = orders.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0);
   const estimatedCommission = totalGMV * (commissionRate / 100);
   const totalPaidOut = settlements
-    .filter(s => s.status === "PAID")
+    .filter(s => s.status === "PAID" || s.status === "COMPLETED")
     .reduce((sum, s) => sum + Number(s.amount), 0);
 
-  const handleSaveCommission = (e: React.FormEvent) => {
+  const handleSaveCommission = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaveStatus("✅ Global commission rules updated successfully!");
-    setTimeout(() => setSaveStatus(""), 3000);
+    try {
+      const { data: existing } = await supabase
+        .from("store_settings")
+        .select("value")
+        .eq("key", "marketplace_rules")
+        .maybeSingle();
+
+      const updatedVal = {
+        ...(existing?.value || {}),
+        globalCommissionPct: commissionRate.toString()
+      };
+
+      await supabase.from("store_settings").upsert({
+        key: "marketplace_rules",
+        value: updatedVal,
+        updated_at: new Date().toISOString()
+      });
+
+      setSaveStatus("✅ Production global commission rate updated & saved to DB!");
+      setTimeout(() => setSaveStatus(""), 4000);
+    } catch (err: any) {
+      alert(err.message || "Failed to save commission rate.");
+    }
   };
 
   // Open payout modal for a seller
   const handleOpenPayoutModal = (seller: any, calculatedPending: number, upiId: string) => {
     setSelectedSellerForPayment(seller);
+    const targetUpi = upiId || seller.phonepay_number || seller.phonepay_no || seller.seller_upi_id || seller.upi_id || (seller.mobile_number ? `${seller.mobile_number}@ybl` : "seller@upi");
     setPayoutForm({
-      amount: calculatedPending.toFixed(2),
-      upi_id: upiId || seller.upi_id || seller.mobile_number + "@ybl" || "seller@upi",
+      amount: calculatedPending > 0 ? calculatedPending.toFixed(2) : "0.00",
+      upi_id: targetUpi,
       payment_method: seller.payment_method || "PhonePe",
       utr_number: "",
       payment_date: new Date().toISOString().split("T")[0],
-      notes: `Manual settlement transfer for ${seller.business_name || seller.owner_name || 'Seller'}`
+      notes: `Manual settlement transfer via PhonePe/UPI for ${seller.business_name || seller.owner_name || 'Seller'}`
     });
     setPayoutStatusMessage("");
   };
 
-  // Submit Payout & Mark as Paid
+  // Submit Payout, Mark as Paid & Send Transaction Receipt Email to Account Opening Email
   const handleConfirmMarkAsPaid = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!payoutForm.utr_number.trim()) {
@@ -129,11 +165,13 @@ export default function PaymentsCommissionView() {
 
     if (!selectedSellerForPayment) return;
 
+    const sellerEmail = selectedSellerForPayment.email || selectedSellerForPayment.user_email || "N/A";
+
     const newSettlement: SettlementRecord = {
       id: `SET-${Date.now().toString().slice(-6)}`,
       seller_id: selectedSellerForPayment.id || `seller-${Date.now()}`,
       seller_name: selectedSellerForPayment.business_name || selectedSellerForPayment.owner_name || "Seller",
-      seller_email: selectedSellerForPayment.email || "N/A",
+      seller_email: sellerEmail,
       amount: Number(payoutForm.amount),
       upi_id: payoutForm.upi_id,
       payment_method: payoutForm.payment_method,
@@ -144,30 +182,50 @@ export default function PaymentsCommissionView() {
       notes: payoutForm.notes
     };
 
-    // Save to Supabase
+    // 1. Save to Supabase DB
     try {
       await supabase.from("seller_settlements").insert([newSettlement]);
     } catch (e) {
       console.warn("Could not insert into Supabase seller_settlements table:", e);
     }
 
-    // Save to Local Storage fallback
+    // 2. Save to Local Storage fallback
     const updatedSets = [newSettlement, ...settlements];
     setSettlements(updatedSets);
     localStorage.setItem("asali_swad_all_seller_settlements", JSON.stringify(updatedSets));
 
-    // Also update seller's isolated settlements
-    if (selectedSellerForPayment.id) {
-      const sellerKey = `seller_settlements_${selectedSellerForPayment.id}`;
-      const sellerExisting = JSON.parse(localStorage.getItem(sellerKey) || "[]");
-      localStorage.setItem(sellerKey, JSON.stringify([newSettlement, ...sellerExisting]));
+    // 3. Send official Transaction Receipt Email to seller's account opening email
+    setPayoutStatusMessage("⏳ Recording payment & sending receipt email to " + sellerEmail + "...");
+    try {
+      const emailRes = await fetch("/api/admin/payout/send-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail: sellerEmail,
+          sellerName: selectedSellerForPayment.business_name || selectedSellerForPayment.owner_name || "Seller",
+          amount: payoutForm.amount,
+          paymentMethod: payoutForm.payment_method,
+          upiId: payoutForm.upi_id,
+          utrNumber: payoutForm.utr_number.trim(),
+          paymentDate: payoutForm.payment_date,
+          notes: payoutForm.notes
+        })
+      });
+      const emailData = await emailRes.json();
+      if (emailData?.message) {
+        setPayoutStatusMessage(emailData.message);
+      } else {
+        setPayoutStatusMessage("✅ Settlement marked as PAID & receipt sent!");
+      }
+    } catch (emailErr) {
+      console.warn("Receipt email API notice:", emailErr);
+      setPayoutStatusMessage("✅ Settlement marked as PAID with UTR reference!");
     }
 
-    setPayoutStatusMessage("✅ Settlement marked as PAID successfully with UTR reference!");
     setTimeout(() => {
       setSelectedSellerForPayment(null);
       setPayoutStatusMessage("");
-    }, 1500);
+    }, 2500);
   };
 
   // Export Settlement Report to Excel
@@ -478,48 +536,54 @@ export default function PaymentsCommissionView() {
                 <Smartphone className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Record Manual Settlement Transfer</h3>
-                <p className="text-xs font-medium text-slate-400">{selectedSellerForPayment.business_name || selectedSellerForPayment.owner_name}</p>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Record PhonePe Manual Settlement</h3>
+                <p className="text-xs font-bold text-slate-500">{selectedSellerForPayment.business_name || selectedSellerForPayment.owner_name}</p>
               </div>
             </div>
 
             {payoutStatusMessage && (
-              <div className={`p-4 rounded-2xl text-xs font-bold ${payoutStatusMessage.includes("✅") ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+              <div className={`p-4 rounded-2xl text-xs font-bold ${payoutStatusMessage.includes("❌") ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
                 {payoutStatusMessage}
               </div>
             )}
 
-            {/* Quick UPI Pay Link Helper */}
-            <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/50 space-y-2">
+            {/* Seller Account & PhonePe Transfer Summary */}
+            <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400 tracking-wider">UPI / PhonePe Transfer Details</span>
+                <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400 tracking-wider">PhonePe / UPI Details</span>
                 <a
                   href={`upi://pay?pa=${payoutForm.upi_id}&pn=${encodeURIComponent(selectedSellerForPayment.business_name || 'Seller')}&am=${payoutForm.amount}&cu=INR`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:underline"
+                  className="flex items-center gap-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400 hover:underline"
                 >
                   Open PhonePe/UPI App <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Target VPA: <span className="font-mono text-emerald-600">{payoutForm.upi_id}</span>
-              </p>
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Amount to Send: <span className="text-base font-black text-emerald-600">₹{payoutForm.amount}</span>
-              </p>
+
+              <div className="text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+                <p>
+                  Target PhonePe / VPA: <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black">{payoutForm.upi_id}</span>
+                </p>
+                <p>
+                  Account Opening Email: <span className="font-mono text-slate-900 dark:text-white font-black">{selectedSellerForPayment.email || selectedSellerForPayment.user_email || "N/A"}</span>
+                </p>
+                <p className="text-[11px] text-slate-500 font-medium italic">
+                  * Official payout transaction receipt will be emailed to this account address.
+                </p>
+              </div>
             </div>
 
             <form onSubmit={handleConfirmMarkAsPaid} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Transfer Amount (₹)</label>
+                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Transfer Amount (₹) *</label>
                   <input
                     type="number"
                     step="0.01"
                     value={payoutForm.amount}
                     onChange={(e) => setPayoutForm(prev => ({ ...prev, amount: e.target.value }))}
-                    className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-black outline-none focus:border-emerald-500"
+                    className="w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-sm font-black text-slate-900 dark:text-white outline-none focus:border-emerald-500"
                     required
                   />
                 </div>
@@ -529,7 +593,7 @@ export default function PaymentsCommissionView() {
                   <select
                     value={payoutForm.payment_method}
                     onChange={(e) => setPayoutForm(prev => ({ ...prev, payment_method: e.target.value }))}
-                    className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold outline-none focus:border-emerald-500"
+                    className="w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-emerald-500 cursor-pointer"
                   >
                     <option value="PhonePe">PhonePe</option>
                     <option value="UPI">Generic UPI</option>
@@ -540,13 +604,13 @@ export default function PaymentsCommissionView() {
               </div>
 
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">UTR / Bank Transaction Reference Number *</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">PhonePe UTR / Bank Transaction Ref *</label>
                 <input
                   type="text"
-                  placeholder="e.g. 402319201948 or UPI/4023..."
+                  placeholder="Enter 12-digit UTR from PhonePe confirmation..."
                   value={payoutForm.utr_number}
                   onChange={(e) => setPayoutForm(prev => ({ ...prev, utr_number: e.target.value }))}
-                  className="w-full rounded-2xl border-2 border-emerald-500/30 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-mono font-bold text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-2xl border-2 border-emerald-500/40 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-mono font-black text-slate-900 dark:text-white outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -557,7 +621,7 @@ export default function PaymentsCommissionView() {
                   type="date"
                   value={payoutForm.payment_date}
                   onChange={(e) => setPayoutForm(prev => ({ ...prev, payment_date: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold outline-none focus:border-emerald-500"
+                  className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -565,16 +629,16 @@ export default function PaymentsCommissionView() {
                 <button
                   type="button"
                   onClick={() => setSelectedSellerForPayment(null)}
-                  className="px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-xs uppercase tracking-wider hover:bg-slate-200"
+                  className="px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-xs uppercase tracking-wider hover:bg-slate-200 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+                  className="px-6 py-3 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-2 cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  Confirm & Mark as PAID
+                  Confirm & Send Receipt Email
                 </button>
               </div>
             </form>
