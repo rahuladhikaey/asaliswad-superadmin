@@ -41,6 +41,12 @@ export default function PaymentsCommissionView() {
   const [sellers, setSellers] = useState<any[]>([]);
   const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
   const [commissionRate, setCommissionRate] = useState<number>(10);
+  const [feeConfig, setFeeConfig] = useState({
+    deliveryCharge: "40",
+    freeShippingThreshold: "999",
+    appCharge: "5",
+    defaultShippingCost: "50"
+  });
   const [saveStatus, setSaveStatus] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -69,8 +75,15 @@ export default function PaymentsCommissionView() {
       setOrders(oRes.data || []);
       setSellers(sRes.data || []);
 
-      if (settingsRes?.data?.value?.globalCommissionPct) {
-        setCommissionRate(Number(settingsRes.data.value.globalCommissionPct));
+      if (settingsRes?.data?.value) {
+        const val = settingsRes.data.value;
+        if (val.globalCommissionPct) setCommissionRate(Number(val.globalCommissionPct));
+        setFeeConfig({
+          deliveryCharge: val.deliveryCharge || "40",
+          freeShippingThreshold: val.freeShippingThreshold || "999",
+          appCharge: val.appCharge || "5",
+          defaultShippingCost: val.defaultShippingCost || "50"
+        });
       }
 
       if (!setRes.error && setRes.data) {
@@ -124,7 +137,11 @@ export default function PaymentsCommissionView() {
 
       const updatedVal = {
         ...(existing?.value || {}),
-        globalCommissionPct: commissionRate.toString()
+        globalCommissionPct: commissionRate.toString(),
+        deliveryCharge: feeConfig.deliveryCharge,
+        freeShippingThreshold: feeConfig.freeShippingThreshold,
+        appCharge: feeConfig.appCharge,
+        defaultShippingCost: feeConfig.defaultShippingCost
       };
 
       await supabase.from("store_settings").upsert({
@@ -133,10 +150,10 @@ export default function PaymentsCommissionView() {
         updated_at: new Date().toISOString()
       });
 
-      setSaveStatus("✅ Production global commission rate updated & saved to DB!");
+      setSaveStatus("✅ Production Delivery Charge, Fees & Seller Commission saved to real-time DB!");
       setTimeout(() => setSaveStatus(""), 4000);
     } catch (err: any) {
-      alert(err.message || "Failed to save commission rate.");
+      alert(err.message || "Failed to save commission & charges.");
     }
   };
 
@@ -486,12 +503,17 @@ export default function PaymentsCommissionView() {
         </div>
       </div>
 
-      {/* Global Commission Settings Box */}
+      {/* Global Fees, Delivery Charge & Commission Settings Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-        <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-          <Settings className="w-5 h-5 text-emerald-600" />
-          Global Commission Configuration Rules
-        </h2>
+        <div>
+          <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <Settings className="w-5 h-5 text-emerald-600" />
+            <span>Marketplace Delivery Charge, App Fees & Commission Rules</span>
+          </h2>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            Configure live delivery charges, minimum order free delivery limit, platform app charges, and seller commission % applied in real-time.
+          </p>
+        </div>
 
         {saveStatus && (
           <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200">
@@ -499,24 +521,63 @@ export default function PaymentsCommissionView() {
           </div>
         )}
 
-        <form onSubmit={handleSaveCommission} className="flex flex-col sm:flex-row items-end gap-4 max-w-md">
-          <div className="flex-1 space-y-1">
-            <label className="text-[10px] font-black uppercase text-slate-400">Platform Seller Commission (%)</label>
-            <input
-              type="number"
-              min="0"
-              max="50"
-              value={commissionRate}
-              onChange={(e) => setCommissionRate(Number(e.target.value))}
-              className="w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-sm font-black outline-none focus:border-emerald-500"
-            />
+        <form onSubmit={handleSaveCommission} className="space-y-4 text-xs font-bold">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-500 block">Delivery Charge (₹)</label>
+              <input
+                type="number"
+                value={feeConfig.deliveryCharge}
+                onChange={(e) => setFeeConfig({ ...feeConfig, deliveryCharge: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-2.5 text-sm font-black text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+              />
+              <span className="text-[9px] text-slate-400">Fee charged on order checkout</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-500 block">Free Delivery Min Order (₹)</label>
+              <input
+                type="number"
+                value={feeConfig.freeShippingThreshold}
+                onChange={(e) => setFeeConfig({ ...feeConfig, freeShippingThreshold: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-2.5 text-sm font-black text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+              />
+              <span className="text-[9px] text-slate-400">Minimum subtotal for free shipping</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 block">App Charge / Fee (₹)</label>
+              <input
+                type="number"
+                value={feeConfig.appCharge}
+                onChange={(e) => setFeeConfig({ ...feeConfig, appCharge: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-2.5 text-sm font-black text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+              />
+              <span className="text-[9px] text-slate-400">Platform convenience charge per order</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-500 block">Seller Commission (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="50"
+                value={commissionRate}
+                onChange={(e) => setCommissionRate(Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-2.5 text-sm font-black text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+              />
+              <span className="text-[9px] text-slate-400">Commission rate deducted from payouts</span>
+            </div>
           </div>
-          <button
-            type="submit"
-            className="px-6 py-3 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider hover:bg-emerald-700 shadow-md shadow-emerald-600/20"
-          >
-            Save Commission Rule
-          </button>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="px-6 py-3 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider hover:bg-emerald-700 shadow-md shadow-emerald-600/20 cursor-pointer"
+            >
+              Save Delivery Charges & Commission Rules
+            </button>
+          </div>
         </form>
       </div>
 
