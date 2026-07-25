@@ -142,6 +142,36 @@ export default function SellerManagementView() {
     }
   };
 
+  const handleFssaiAction = async (sellerId: string, fssaiStatus: string, reason?: string) => {
+    setActioningId(sellerId);
+    try {
+      const payload: any = { 
+        fssai_status: fssaiStatus,
+        verified_at: fssaiStatus === 'Verified' ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString()
+      };
+      if (reason) payload.fssai_rejection_reason = reason;
+
+      const { error } = await supabase
+        .from("sellers")
+        .update(payload)
+        .eq("id", sellerId);
+
+      if (error) throw error;
+
+      setStatusMessage(`✅ FSSAI License status set to ${fssaiStatus}`);
+      await loadData();
+      if (selectedSeller?.id === sellerId) {
+        setSelectedSeller({ ...selectedSeller, ...payload });
+      }
+    } catch (err: any) {
+      console.error("Failed to update FSSAI status:", err);
+      setStatusMessage(`❌ Error: ${err.message}`);
+    } finally {
+      setActioningId(null);
+    }
+  };
+
   const handleRestoreAccount = async (sellerId: string) => {
     setActioningId(sellerId);
     try {
