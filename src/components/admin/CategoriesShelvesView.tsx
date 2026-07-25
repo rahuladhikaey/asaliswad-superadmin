@@ -105,6 +105,27 @@ export default function CategoriesShelvesView() {
     (c.name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleSeedCategories = async () => {
+    const defaults = [
+      { name: "Spices & Masala" },
+      { name: "Handmade Bori" },
+      { name: "Pulses & Dals" },
+      { name: "Pure Oils & Ghee" },
+      { name: "Rice & Grains" },
+      { name: "Pickles & Chutney" },
+      { name: "Sweets & Snacks" },
+      { name: "Organic Specials" }
+    ];
+    try {
+      const { error } = await supabase.from("categories").insert(defaults);
+      if (error) throw error;
+      setStatusMessage("✅ 8 Default Shop Categories seeded to production database!");
+      loadData();
+    } catch (err: any) {
+      alert(err.message || "Failed to seed categories.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -121,7 +142,13 @@ export default function CategoriesShelvesView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={handleSeedCategories}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs transition-all active:scale-95 shadow-md cursor-pointer"
+          >
+            <span>✨ Seed Default Categories</span>
+          </button>
           <button
             onClick={() => exportCategoriesExcel(categories, products)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all active:scale-95 shadow-md shadow-emerald-600/20 cursor-pointer"
