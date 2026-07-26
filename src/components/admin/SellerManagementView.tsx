@@ -669,24 +669,26 @@ export default function SellerManagementView() {
                 </div>
 
                 {/* Quick FSSAI Approval Action Buttons */}
-                <div className="pt-2 flex items-center gap-2 border-t border-emerald-200/50 dark:border-emerald-800/50">
-                  <button
-                    type="button"
-                    onClick={() => handleFssaiAction(selectedSeller.id, "Verified")}
-                    disabled={actioningId === selectedSeller.id}
-                    className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
-                  >
-                    ✓ Approve FSSAI
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleFssaiAction(selectedSeller.id, "Rejected", "Invalid document or expired license")}
-                    disabled={actioningId === selectedSeller.id}
-                    className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
-                  >
-                    ✕ Reject FSSAI
-                  </button>
-                </div>
+                {selectedSeller.fssai_status === "Pending Verification" && (
+                  <div className="pt-2 flex items-center gap-2 border-t border-emerald-200/50 dark:border-emerald-800/50">
+                    <button
+                      type="button"
+                      onClick={() => handleFssaiAction(selectedSeller.id, "Verified")}
+                      disabled={actioningId === selectedSeller.id}
+                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                    >
+                      ✓ Approve FSSAI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleFssaiAction(selectedSeller.id, "Rejected", "Invalid document or expired license")}
+                      disabled={actioningId === selectedSeller.id}
+                      className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                    >
+                      ✕ Reject FSSAI
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 text-amber-900 dark:text-amber-300">

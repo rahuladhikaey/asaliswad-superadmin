@@ -198,21 +198,25 @@ export default function SuperAdminFSSAIQueuePage() {
                     </td>
                     <td className="py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleFssaiAction(s.id, 'Verified')}
-                          className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] transition-colors"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedSeller(s);
-                            setShowRejectModal(true);
-                          }}
-                          className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[11px] transition-colors"
-                        >
-                          Reject
-                        </button>
+                        {s.fssai_status === 'Pending Verification' && (
+                          <>
+                            <button
+                              onClick={() => handleFssaiAction(s.id, 'Verified')}
+                              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedSeller(s);
+                                setShowRejectModal(true);
+                              }}
+                              className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[11px] transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
