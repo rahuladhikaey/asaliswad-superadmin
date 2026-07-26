@@ -138,9 +138,9 @@ export default function CategoriesShelvesView() {
 
     const payload = {
       name: categoryName.trim(),
+      slug: categoryName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-"),
       main_category: mainCategory,
       image_url: imagePreview || null,
-      icon: imagePreview ? null : "📦",
       updated_at: new Date().toISOString()
     };
 
