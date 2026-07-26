@@ -145,9 +145,12 @@ export default function SellerManagementView() {
   const handleFssaiAction = async (sellerId: string, fssaiStatus: string, reason?: string) => {
     setActioningId(sellerId);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
       const payload: any = { 
         fssai_status: fssaiStatus,
         verified_at: fssaiStatus === 'Verified' ? new Date().toISOString() : null,
+        verified_by: user?.id || null,
         updated_at: new Date().toISOString()
       };
       if (reason) payload.fssai_rejection_reason = reason;
