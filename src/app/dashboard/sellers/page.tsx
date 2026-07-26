@@ -353,13 +353,12 @@ export default function SuperAdminSellersPage() {
               </div>
 
               <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700">
-                <h3 className="font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1">FSSAI Details</h3>
-                <p><strong>License Number:</strong> <span className="font-bold tracking-wider">{selectedSeller.fssai_license_number || 'N/A'}</span></p>
+                <h3 className="font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1">FSSAI License Details</h3>
+                <p><strong>License Status:</strong> <span className="font-bold text-emerald-600 dark:text-emerald-400">{selectedSeller.fssai_certificate_url ? 'Auto Verified' : (selectedSeller.fssai_status || 'Not Uploaded')}</span></p>
                 <p><strong>Expiry Date:</strong> {selectedSeller.fssai_expiry_date || 'N/A'}</p>
-                <p><strong>Verification Status:</strong> {selectedSeller.fssai_status}</p>
                 {selectedSeller.fssai_certificate_url && (
                   <a href={selectedSeller.fssai_certificate_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-emerald-600 font-bold hover:underline mt-1">
-                    <FileText size={14} /> View Certificate Doc
+                    <FileText size={14} /> View Certificate Doc 📄
                   </a>
                 )}
               </div>
@@ -369,34 +368,6 @@ export default function SuperAdminSellersPage() {
                 <p><strong>Pickup Address:</strong> {selectedSeller.pickup_address || 'N/A'}</p>
                 <p><strong>Warehouse Address:</strong> {selectedSeller.warehouse_address || 'N/A'}</p>
                 <p><strong>City / State / PIN:</strong> {selectedSeller.city}, {selectedSeller.state} - {selectedSeller.pincode}</p>
-              </div>
-            </div>
-
-            {/* FSSAI Verification Action Toolbar */}
-            <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-3">
-              <h3 className="text-xs font-bold text-emerald-900 dark:text-emerald-200">FSSAI Verification Controls</h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => handleFssaiAction(selectedSeller.id, 'Verified')}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
-                >
-                  Approve FSSAI
-                </button>
-                <button
-                  onClick={() => {
-                    setRejectType("fssai");
-                    setShowRejectModal(true);
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-colors"
-                >
-                  Reject FSSAI
-                </button>
-                <button
-                  onClick={() => handleFssaiAction(selectedSeller.id, 'Pending Verification', 'Requested updated certificate re-upload.')}
-                  className="px-3 py-1.5 rounded-lg border border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-semibold transition-colors"
-                >
-                  Request Re-upload
-                </button>
               </div>
             </div>
 

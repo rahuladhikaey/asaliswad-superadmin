@@ -188,36 +188,16 @@ export default function SuperAdminFSSAIQueuePage() {
                     </td>
                     <td className="py-3">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        s.fssai_status === 'Verified' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' :
-                        s.fssai_status === 'Pending Verification' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' :
-                        s.fssai_status === 'Rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
+                        (s.fssai_status === 'Verified' || s.fssai_certificate_url) ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' :
                         'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                       }`}>
-                        {s.fssai_status || 'Not Submitted'}
+                        {s.fssai_certificate_url ? 'Auto Verified' : (s.fssai_status || 'Not Uploaded')}
                       </span>
                     </td>
                     <td className="py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {s.fssai_status === 'Pending Verification' && (
-                          <>
-                            <button
-                              onClick={() => handleFssaiAction(s.id, 'Verified')}
-                              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] transition-colors"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedSeller(s);
-                                setShowRejectModal(true);
-                              }}
-                              className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[11px] transition-colors"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
+                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        {s.fssai_certificate_url ? '✓ Verified' : '—'}
+                      </span>
                     </td>
                   </tr>
                 ))}
