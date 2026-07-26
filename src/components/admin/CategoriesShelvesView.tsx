@@ -172,10 +172,11 @@ export default function CategoriesShelvesView() {
         } else {
           savedCategory = data?.[0];
         }
-        if (savedCategory) {
-          await syncCategoryToCustomerDb(savedCategory, 'upsert');
-        }
         setStatusMessage(`✨ New subcategory "${categoryName.trim()}" created under ${mainCategory}!`);
+      }
+
+      if (savedCategory) {
+        await syncCategoryToCustomerDb(savedCategory, 'upsert');
       }
 
       loadData();
