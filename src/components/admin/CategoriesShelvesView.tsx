@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { supabaseB as supabase } from "@shared/utils/supabaseClient";
-import { syncCategoryToCustomerDb } from "@shared/utils/dualDatabaseSync";
 import { 
   Plus, 
   Edit2, 
@@ -139,7 +138,7 @@ export default function CategoriesShelvesView() {
     const payload = {
       name: categoryName.trim(),
       slug: categoryName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-"),
-      main_category: mainCategory,
+      description: mainCategory,
       image_url: imagePreview || null,
       updated_at: new Date().toISOString()
     };
@@ -175,10 +174,6 @@ export default function CategoriesShelvesView() {
         setStatusMessage(`✨ New subcategory "${categoryName.trim()}" created under ${mainCategory}!`);
       }
 
-      if (savedCategory) {
-        await syncCategoryToCustomerDb(savedCategory, 'upsert');
-      }
-
       loadData();
       setCategoryName("");
       setImagePreview("");
@@ -211,7 +206,6 @@ export default function CategoriesShelvesView() {
     setActioningId(categoryId);
     try {
       await supabase.from("categories").delete().eq("id", categoryId);
-      await syncCategoryToCustomerDb({ id: categoryId }, 'delete');
       const updated = categories.filter((c) => c.id !== categoryId);
       setCategories(updated);
       if (typeof window !== "undefined") {
