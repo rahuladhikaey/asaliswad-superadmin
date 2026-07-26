@@ -24,6 +24,8 @@ export default function SuperAdminFSSAIQueuePage() {
   const [selectedSeller, setSelectedSeller] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
+  const [previewMerchantName, setPreviewMerchantName] = useState<string>("");
 
   const loadFSSAIQueue = async () => {
     setLoading(true);
@@ -174,16 +176,18 @@ export default function SuperAdminFSSAIQueuePage() {
                     </td>
                     <td className="py-3">
                       {s.fssai_certificate_url ? (
-                        <a
-                          href={s.fssai_certificate_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 font-bold text-emerald-600 hover:underline"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewDocUrl(s.fssai_certificate_url);
+                            setPreviewMerchantName(s.business_name || s.owner_name || "Merchant");
+                          }}
+                          className="inline-flex items-center gap-1.5 font-extrabold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 cursor-pointer shadow-2xs transition-colors"
                         >
-                          <FileText size={14} /> Open Doc
-                        </a>
+                          <Eye size={14} /> View FSSAI Pic
+                        </button>
                       ) : (
-                        <span className="text-slate-400">No file</span>
+                        <span className="text-slate-400 font-medium">No file</span>
                       )}
                     </td>
                     <td className="py-3">
@@ -237,6 +241,65 @@ export default function SuperAdminFSSAIQueuePage() {
                 className="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-colors"
               >
                 Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FSSAI License Document Modal Viewer for Superadmin */}
+      {previewDocUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="text-emerald-600" size={20} /> FSSAI License Certificate — {previewMerchantName}
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                  Stored on Supabase Bucket / Storage: {previewDocUrl.slice(0, 60)}...
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewDocUrl(null)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 flex items-center justify-center min-h-[400px]">
+              {previewDocUrl.includes(".pdf") ? (
+                <iframe
+                  src={previewDocUrl}
+                  className="w-full h-[550px] rounded-xl border-none"
+                  title="FSSAI Document PDF"
+                />
+              ) : (
+                <img
+                  src={previewDocUrl}
+                  alt="FSSAI License Certificate"
+                  className="max-h-[600px] w-auto max-w-full object-contain rounded-xl shadow-md"
+                />
+              )}
+            </div>
+
+            <div className="flex justify-between items-center pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
+              <a
+                href={previewDocUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
+              >
+                <FileText size={14} /> Open Direct File Link
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewDocUrl(null)}
+                className="px-5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold transition-all"
+              >
+                Close Viewer
               </button>
             </div>
           </div>

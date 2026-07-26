@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { getCategoryIcon } from "@/utils/categoryIcons";
 import { exportCategoriesExcel } from "@/utils/excelExport";
+import { uploadToSupabaseBucket } from "@shared/services";
 
 const MAIN_CATEGORIES = ["Grocery", "Bakery", "Snacks", "Spices", "Oils & Ghee", "Organic Specials"];
 
@@ -135,11 +136,25 @@ export default function CategoriesShelvesView() {
     e.preventDefault();
     if (!categoryName.trim()) return;
 
+    let finalImageUrl = imagePreview || null;
+    if (imagePreview && imagePreview.startsWith("data:")) {
+      try {
+        finalImageUrl = await uploadToSupabaseBucket(
+          "categories", 
+          imagePreview, 
+          `cat_${Date.now()}_${categoryName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-")}.jpg`
+        );
+      } catch (err) {
+        console.warn("Category Supabase bucket upload notice:", err);
+      }
+    }
+
     const payload = {
       name: categoryName.trim(),
       slug: categoryName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-"),
       description: mainCategory,
-      image_url: imagePreview || null,
+      main_category: mainCategory,
+      image_url: finalImageUrl,
       updated_at: new Date().toISOString()
     };
 
