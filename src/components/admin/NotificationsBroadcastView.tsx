@@ -17,13 +17,51 @@ export default function NotificationsBroadcastView() {
 
     setSending(true);
     try {
-      // In Supabase, dispatch broadcast message to notifications table or metadata channel
+      // Insert notification into notifications table so customers see it
+      const { error } = await supabase
+        .from("notifications")
+        .insert({
+          title: title.trim(),
+          message: message.trim(),
+          target_group: targetGroup,
+          is_active: true,
+          created_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
       setStatusMsg(`🎉 Broadcast notification successfully dispatched to ${targetGroup.toUpperCase()}!`);
       setTitle("");
       setMessage("");
       setTimeout(() => setStatusMsg(""), 3500);
     } catch (e: any) {
-      alert("Failed to send notification: " + e.message);
+      // Fallback: try store_settings broadcast_messages if notifications table doesn't exist
+      try {
+        const { data: existing } = await supabase
+          .from("store_settings")
+          .select("value")
+          .eq("key", "broadcast_messages")
+          .single();
+
+        const messages = existing?.value || [];
+        const updated = [
+          { id: Date.now(), title: title.trim(), message: message.trim(), target_group: targetGroup, is_active: true, created_at: new Date().toISOString() },
+          ...messages
+        ].slice(0, 50); // Keep last 50 messages
+
+        await supabase.from("store_settings").upsert({
+          key: "broadcast_messages",
+          value: updated,
+          updated_at: new Date().toISOString()
+        });
+
+        setStatusMsg(`🎉 Broadcast notification dispatched to ${targetGroup.toUpperCase()} via store settings!`);
+        setTitle("");
+        setMessage("");
+        setTimeout(() => setStatusMsg(""), 3500);
+      } catch (fallbackErr: any) {
+        alert("Failed to send notification: " + (fallbackErr.message || e.message));
+      }
     }
     setSending(false);
   };

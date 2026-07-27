@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 export default function MarketplaceSettingsView() {
-  const [activeTab, setActiveTab] = useState<"general" | "fees" | "offers" | "coupons">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "fees" | "offers" | "coupons" | "homepage">("general");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
@@ -51,6 +51,14 @@ export default function MarketplaceSettingsView() {
     discount_pct: 100,
   });
 
+  // Homepage Banner & Marquee State
+  const [herobanners, setHeroBanners] = useState<any[]>([]);
+  const [newBannerUrl, setNewBannerUrl] = useState("");
+  const [newBannerAlt, setNewBannerAlt] = useState("");
+  const [marqueeItems, setMarqueeItems] = useState<any[]>([]);
+  const [newMarqueeText, setNewMarqueeText] = useState("");
+  const [newMarqueeIcon, setNewMarqueeIcon] = useState("badge");
+
   const loadSettings = async () => {
     setLoading(true);
     try {
@@ -75,6 +83,14 @@ export default function MarketplaceSettingsView() {
         if (rulesMap.special_offers_list) {
           setSpecialOffers(rulesMap.special_offers_list || []);
         }
+
+        if (rulesMap.hero_banners) {
+          setHeroBanners(rulesMap.hero_banners || []);
+        }
+
+        if (rulesMap.marquee_banner) {
+          setMarqueeItems(rulesMap.marquee_banner || []);
+        }
       }
 
       // Fetch products for BOGO offer selector
@@ -97,6 +113,7 @@ export default function MarketplaceSettingsView() {
     setStatusMsg("");
 
     try {
+      // Save as 'marketplace_rules' (superadmin internal usage)
       const { error } = await supabase
         .from("store_settings")
         .upsert({
@@ -107,7 +124,22 @@ export default function MarketplaceSettingsView() {
 
       if (error) throw error;
 
-      setStatusMsg("🎉 Production marketplace charges, commission % & rules updated in real-time DB!");
+      // Also save as 'billing' key so Customer checkout/cart picks up these values
+      const billingPayload = {
+        deliveryFee: Number(marketplaceConfig.deliveryCharge) || 29,
+        freeDeliveryThreshold: Number(marketplaceConfig.freeShippingThreshold) || 999,
+        packagingFee: Number(marketplaceConfig.appCharge) || 9,
+        tax: 3
+      };
+      await supabase
+        .from("store_settings")
+        .upsert({
+          key: "billing",
+          value: billingPayload,
+          updated_at: new Date().toISOString()
+        });
+
+      setStatusMsg("🎉 Production marketplace charges, commission % & rules updated in real-time DB! Customer checkout will reflect these changes immediately.");
       setTimeout(() => setStatusMsg(""), 4000);
     } catch (err: any) {
       alert(err.message || "Failed to save settings to database.");
@@ -214,6 +246,12 @@ export default function MarketplaceSettingsView() {
             className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === "coupons" ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" : "text-slate-500"}`}
           >
             Coupons ({coupons.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("homepage")}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === "homepage" ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" : "text-slate-500"}`}
+          >
+            🏠 Homepage
           </button>
         </div>
       </div>
@@ -510,6 +548,156 @@ export default function MarketplaceSettingsView() {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* HOMEPAGE TAB */}
+      {activeTab === "homepage" && (
+        <div className="space-y-6">
+          {/* Hero Banners Manager */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+            <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              🖼️ Hero Banner Carousel
+            </h2>
+            <p className="text-xs font-bold text-slate-500">Add banner image URLs to show on the customer homepage carousel. Changes reflect instantly.</p>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 space-y-2">
+                <input
+                  type="url"
+                  placeholder="Image URL (e.g., https://supabase.co/...)"
+                  value={newBannerUrl}
+                  onChange={e => setNewBannerUrl(e.target.value)}
+                  className="w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold outline-none focus:border-emerald-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Alt text / description"
+                  value={newBannerAlt}
+                  onChange={e => setNewBannerAlt(e.target.value)}
+                  className="w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold outline-none focus:border-emerald-500"
+                />
+              </div>
+              <button
+                onClick={async () => {
+                  if (!newBannerUrl.trim()) return;
+                  const updated = [...herobanners, { id: Date.now(), src: newBannerUrl.trim(), alt: newBannerAlt.trim() || "Banner Image" }];
+                  setHeroBanners(updated);
+                  setNewBannerUrl("");
+                  setNewBannerAlt("");
+                  await supabase.from("store_settings").upsert({ key: "hero_banners", value: updated, updated_at: new Date().toISOString() });
+                  setStatusMsg("✅ Hero banners updated! Customer homepage will reflect immediately.");
+                  setTimeout(() => setStatusMsg(""), 3000);
+                }}
+                className="px-5 py-2 rounded-2xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shrink-0 self-start"
+              >
+                + Add Banner
+              </button>
+            </div>
+
+            {herobanners.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase text-slate-400">Current Banners ({herobanners.length})</p>
+                {herobanners.map((b: any, i: number) => (
+                  <div key={b.id || i} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 rounded-2xl p-3">
+                    <img src={b.src} alt={b.alt} className="w-16 h-10 object-cover rounded-xl shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-700 truncate">{b.alt}</p>
+                      <p className="text-[10px] font-medium text-slate-400 truncate">{b.src}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const updated = herobanners.filter((_, idx) => idx !== i);
+                        setHeroBanners(updated);
+                        await supabase.from("store_settings").upsert({ key: "hero_banners", value: updated, updated_at: new Date().toISOString() });
+                        setStatusMsg("✅ Banner removed.");
+                        setTimeout(() => setStatusMsg(""), 2000);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 text-[10px] font-black hover:bg-rose-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs font-semibold text-slate-400 italic">No custom banners added yet. Customer homepage uses default local images.</p>
+            )}
+          </div>
+
+          {/* Marquee Banner Manager */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+            <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              📢 Moving Offer Banner Text
+            </h2>
+            <p className="text-xs font-bold text-slate-500">Manage the scrolling marquee text items shown at the top of the customer homepage.</p>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 space-y-2">
+                <input
+                  type="text"
+                  placeholder="e.g., Free Delivery on orders above ₹499"
+                  value={newMarqueeText}
+                  onChange={e => setNewMarqueeText(e.target.value)}
+                  className="w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold outline-none focus:border-emerald-500"
+                />
+                <select
+                  value={newMarqueeIcon}
+                  onChange={e => setNewMarqueeIcon(e.target.value)}
+                  className="w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold outline-none focus:border-emerald-500"
+                >
+                  <option value="badge">✅ Badge (Quality)</option>
+                  <option value="chef">👨‍🍳 Chef (Curated)</option>
+                  <option value="leaf">🌿 Leaf (Fresh)</option>
+                  <option value="truck">🚚 Truck (Delivery)</option>
+                  <option value="tag">🏷️ Tag (Offer)</option>
+                </select>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!newMarqueeText.trim()) return;
+                  const updated = [...marqueeItems, { icon: newMarqueeIcon, text: newMarqueeText.trim() }];
+                  setMarqueeItems(updated);
+                  setNewMarqueeText("");
+                  setNewMarqueeIcon("badge");
+                  await supabase.from("store_settings").upsert({ key: "marquee_banner", value: updated, updated_at: new Date().toISOString() });
+                  setStatusMsg("✅ Marquee banner updated! Customer homepage will reflect immediately.");
+                  setTimeout(() => setStatusMsg(""), 3000);
+                }}
+                className="px-5 py-2 rounded-2xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shrink-0 self-start"
+              >
+                + Add Text
+              </button>
+            </div>
+
+            {marqueeItems.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase text-slate-400">Current Marquee Items ({marqueeItems.length})</p>
+                {marqueeItems.map((m: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 rounded-2xl p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{m.icon === "chef" ? "👨‍🍳" : m.icon === "leaf" ? "🌿" : m.icon === "truck" ? "🚚" : m.icon === "tag" ? "🏷️" : "✅"}</span>
+                      <span className="text-xs font-bold text-slate-700">{m.text}</span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const updated = marqueeItems.filter((_, idx) => idx !== i);
+                        setMarqueeItems(updated);
+                        await supabase.from("store_settings").upsert({ key: "marquee_banner", value: updated, updated_at: new Date().toISOString() });
+                        setStatusMsg("✅ Marquee item removed.");
+                        setTimeout(() => setStatusMsg(""), 2000);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 text-[10px] font-black hover:bg-rose-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs font-semibold text-slate-400 italic">No custom marquee items. Customer homepage uses default text.</p>
+            )}
           </div>
         </div>
       )}

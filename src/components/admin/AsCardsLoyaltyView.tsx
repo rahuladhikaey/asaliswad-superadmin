@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, supabaseAdmin } from "@/lib/supabaseClient";
 import { 
   CreditCard, 
   Coins, 
@@ -50,7 +50,7 @@ export default function AsCardsLoyaltyView() {
     setLoading(true);
     try {
       // 1. Fetch Real Card Applications from Supabase DB
-      const { data: cardsData, error: cardsErr } = await supabase
+      const { data: cardsData, error: cardsErr } = await supabaseAdmin
         .from("card_applications")
         .select("*")
         .order("applied_at", { ascending: false });
@@ -61,11 +61,11 @@ export default function AsCardsLoyaltyView() {
       setApplications(cardsData || []);
 
       // 2. Fetch Products
-      const { data: pData } = await supabase.from("products").select("id, name, price");
+      const { data: pData } = await supabaseAdmin.from("products").select("id, name, price");
       setProducts(pData || []);
 
       // 3. Fetch Active Special Offer / BOGO from store_settings
-      const { data: offerData } = await supabase
+      const { data: offerData } = await supabaseAdmin
         .from("store_settings")
         .select("value")
         .eq("key", "special_offers_bogo")
@@ -101,15 +101,31 @@ export default function AsCardsLoyaltyView() {
 
   const handleUpdateStatus = async (appId: string, status: string) => {
     try {
+      const updates: any = { status, updated_at: new Date().toISOString() };
+
+      // Auto-assign card number and expiry when approving
+      if (status === "APPROVED") {
+        const existing = applications.find(a => a.id === appId);
+        if (!existing?.card_number) {
+          updates.card_number = `AS-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        if (!existing?.expires_at) {
+          updates.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+        }
+        if (!existing?.coins || existing.coins === 0) {
+          updates.coins = 250;
+        }
+      }
+
       const { error } = await supabase
         .from("card_applications")
-        .update({ status, updated_at: new Date().toISOString() })
+        .update(updates)
         .eq("id", appId);
 
       if (error) throw error;
 
-      setApplications(applications.map(app => app.id === appId ? { ...app, status } : app));
-      setStatusMessage(`💳 Card application marked as ${status} in real-time database.`);
+      setApplications(applications.map(app => app.id === appId ? { ...app, ...updates } : app));
+      setStatusMessage(`💳 Card application ${status === "APPROVED" ? `approved! Card No: ${updates.card_number || "existing"}` : `marked as ${status}`} in real-time database.`);
     } catch (err: any) {
       alert(err.message || "Failed to update status in database.");
     }
@@ -118,7 +134,7 @@ export default function AsCardsLoyaltyView() {
   const handleUpdateRenewDate = async (appId: string, dateStr: string) => {
     try {
       const expiresAt = new Date(dateStr).toISOString();
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("card_applications")
         .update({ expires_at: expiresAt, updated_at: new Date().toISOString() })
         .eq("id", appId);
@@ -134,7 +150,7 @@ export default function AsCardsLoyaltyView() {
 
   const handleUpdateCoins = async (appId: string, coinsVal: number) => {
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("card_applications")
         .update({ coins: coinsVal, updated_at: new Date().toISOString() })
         .eq("id", appId);
@@ -154,7 +170,7 @@ export default function AsCardsLoyaltyView() {
       const cardNumber = `AS-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
       const expiresAt = new Date(Date.now() + newCardForm.expires_in_days * 24 * 60 * 60 * 1000).toISOString();
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from("card_applications")
         .insert([{
           name: newCardForm.name,
@@ -194,7 +210,7 @@ export default function AsCardsLoyaltyView() {
     };
 
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("store_settings")
         .upsert({
           key: "special_offers_bogo",
