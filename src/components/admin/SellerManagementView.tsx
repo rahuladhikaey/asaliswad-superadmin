@@ -685,20 +685,32 @@ export default function SellerManagementView() {
 
       {/* 🔮 SELLER PROFILE MODAL */}
       {selectedSeller && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-emerald-600 text-white font-black text-lg flex items-center justify-center">
-                  {(selectedSeller.full_name || selectedSeller.owner_name || "M")[0].toUpperCase()}
+                <div className="h-14 w-14 rounded-2xl bg-emerald-600 text-white font-black text-xl flex items-center justify-center shadow-lg shadow-emerald-600/20">
+                  {(selectedSeller.business_name || selectedSeller.full_name || selectedSeller.owner_name || "M")[0].toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                    {selectedSeller.full_name || selectedSeller.owner_name || selectedSeller.business_name}
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Merchant Profile Details</span>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                    {selectedSeller.business_name || selectedSeller.full_name || selectedSeller.owner_name || "Seller"}
                   </h3>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase">
-                    Category: {selectedSeller.category || "Grocery"}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase">
+                      Category: {selectedSeller.category || selectedSeller.business_category || "Grocery"}
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      (selectedSeller.account_status === "Active" || selectedSeller.status === "approved" || !selectedSeller.account_status) 
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                        : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                    }`}>
+                      Status: {selectedSeller.account_status || selectedSeller.status || "Active"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -710,130 +722,208 @@ export default function SellerManagementView() {
               </button>
             </div>
 
+            {/* Profile Grid Details */}
             <div className="space-y-4 text-xs font-bold">
-              <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950">
+              {/* Primary Contact & Join Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-black">Phone Number</span>
-                  <p className="text-slate-900 dark:text-white mt-0.5">{selectedSeller.phone_number || selectedSeller.mobile_number || "N/A"}</p>
+                  <span className="text-[10px] text-slate-400 uppercase font-black block mb-0.5">Owner / Contact Name</span>
+                  <p className="text-slate-900 dark:text-white font-black text-sm">{selectedSeller.full_name || selectedSeller.owner_name || "N/A"}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-black">Email Address</span>
-                  <p className="text-slate-900 dark:text-white mt-0.5">{selectedSeller.email || "N/A"}</p>
+                  <span className="text-[10px] text-slate-400 uppercase font-black block mb-0.5">Mobile Number</span>
+                  <p className="text-slate-900 dark:text-white font-black text-sm">{selectedSeller.mobile_number || selectedSeller.phone_number || "N/A"}</p>
                 </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 space-y-3">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-black flex items-center gap-1">
-                    <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-                    PhonePe / UPI ID
-                  </span>
-                  <p className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                    {selectedSeller.upi_id || selectedSeller.phonepay_no || "Not configured"}
-                  </p>
-                </div>
-
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-black flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                    Pickup Location
-                  </span>
-                  <p className="text-slate-900 dark:text-white mt-1">
-                    {selectedSeller.pickup_location || selectedSeller.city || "Standard pickup warehouse"}
+                  <span className="text-[10px] text-slate-400 uppercase font-black block mb-0.5">Join Date</span>
+                  <p className="text-emerald-600 dark:text-emerald-400 font-black">
+                    {selectedSeller.created_at ? new Date(selectedSeller.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : "N/A"}
                   </p>
                 </div>
               </div>
 
+              {/* Email & PhonePe UPI Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-black block mb-0.5">Registered Email</span>
+                  <p className="text-slate-900 dark:text-white font-mono">{selectedSeller.email || "N/A"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-black flex items-center gap-1 mb-0.5">
+                    <CreditCard className="w-3.5 h-3.5" />
+                    PhonePe / UPI Number
+                  </span>
+                  <p className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
+                    {selectedSeller.phonepay_number || selectedSeller.phonepay_no || selectedSeller.upi_id || selectedSeller.mobile_number || "Not Configured"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Full Pickup & Warehouse Addresses */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 space-y-3">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-black flex items-center gap-1 mb-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                    Full Pickup Address
+                  </span>
+                  <p className="text-slate-900 dark:text-white text-xs font-bold leading-relaxed">
+                    {selectedSeller.pickup_address || selectedSeller.pickup_location || selectedSeller.address || selectedSeller.city || "Address not provided"}
+                  </p>
+                </div>
+
+                {selectedSeller.warehouse_address && (
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-black flex items-center gap-1 mb-0.5">
+                      <Building2 className="w-3.5 h-3.5 text-blue-500" />
+                      Warehouse Address
+                    </span>
+                    <p className="text-slate-900 dark:text-white text-xs font-bold leading-relaxed">
+                      {selectedSeller.warehouse_address}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-2 pt-1 text-[11px]">
+                  <div>
+                    <span className="text-slate-400 text-[9px] uppercase font-black block">City</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-bold">{selectedSeller.city || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[9px] uppercase font-black block">State</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-bold">{selectedSeller.state || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[9px] uppercase font-black block">Pincode</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-bold font-mono">{selectedSeller.pincode || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* FSSAI Certification Details */}
               <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-black flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    Uploaded Original FSSAI License
+                    FSSAI License & Compliance
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
                     (selectedSeller.fssai_status === "Verified" || selectedSeller.fssai_certificate_url) ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300" :
                     "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   }`}>
-                    {selectedSeller.fssai_certificate_url ? "Auto Verified" : (selectedSeller.fssai_status || "Not Uploaded")}
+                    {selectedSeller.fssai_status || "Verified"}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-slate-900 dark:text-white">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-900 dark:text-white">
                   <div>
-                    <span className="text-[9px] text-slate-400 block font-semibold">FSSAI Document Status</span>
-                    <p className="font-mono text-xs font-black">
-                      {selectedSeller.fssai_certificate_url ? "Original License Uploaded" : "No License File Uploaded"}
+                    <span className="text-[9px] text-slate-400 block font-semibold uppercase">FSSAI License Number</span>
+                    <p className="font-mono text-xs font-black text-slate-900 dark:text-white mt-0.5">
+                      {selectedSeller.fssai_license_number || selectedSeller.fssai_number || "Registered Merchant"}
                     </p>
                     {selectedSeller.fssai_expiry_date && (
                       <p className="text-[10px] text-slate-400 font-normal mt-0.5">Expiry Date: {selectedSeller.fssai_expiry_date}</p>
                     )}
                   </div>
+                  
                   {selectedSeller.fssai_certificate_url && (
-                    <a
-                      href={selectedSeller.fssai_certificate_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition-all shadow-sm flex items-center gap-1.5"
-                    >
-                      View Certificate 📄
-                    </a>
+                    <div className="flex items-center sm:justify-end">
+                      <a
+                        href={selectedSeller.fssai_certificate_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition-all shadow-md flex items-center gap-2"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download FSSAI Document</span>
+                      </a>
+                    </div>
                   )}
                 </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 text-amber-900 dark:text-amber-300">
-                <span className="text-[10px] uppercase font-black">GST Document Status</span>
-                <p className="text-xs font-bold mt-0.5">
-                  ✅ GST Not Required in this system architecture. Fast instant seller onboarding enabled.
-                </p>
               </div>
             </div>
 
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setSelectedSeller(null)}
-                className="px-6 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black"
+                className="px-6 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black shadow-md"
               >
-                Close Profile
+                Close Full Profile
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 📦 SELLER PRODUCTS MODAL */}
+      {/* 📦 SELLER LIVE PRODUCTS CATALOG MODAL */}
       {selectedSellerProducts && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl p-6 space-y-4 max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-black text-slate-900 dark:text-white">
-                Seller Catalog Products ({selectedSellerProducts.length})
-              </h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-3xl shadow-2xl p-6 md:p-8 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Merchant Live Catalog</span>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                  Live Products List ({selectedSellerProducts.length} items)
+                </h3>
+              </div>
               <button
                 onClick={() => setSelectedSellerProducts(null)}
-                className="p-2 rounded-full text-slate-400 hover:bg-slate-100"
+                className="p-2 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {selectedSellerProducts.length === 0 ? (
-                <div className="p-8 text-center text-xs font-bold text-slate-400">
+                <div className="p-12 text-center text-xs font-bold text-slate-400">
+                  <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                   No products cataloged by this seller yet.
                 </div>
               ) : (
-                selectedSellerProducts.map((p) => (
-                  <div key={p.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold">
-                    <div>
-                      <p className="text-slate-900 dark:text-white">{p.name}</p>
-                      <p className="text-[11px] text-slate-400 font-medium">₹{p.price} • Stock: {p.stock || 0} units</p>
+                selectedSellerProducts.map((p) => {
+                  const pImg = p.image_url || p.image || (Array.isArray(p.images) ? p.images[0] : null);
+                  const stockNum = Number(p.stock || p.stock_quantity || 0);
+
+                  return (
+                    <div key={p.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs font-bold hover:border-slate-200 transition-colors">
+                      <div className="flex items-center gap-3.5">
+                        <div className="h-14 w-14 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                          {pImg ? (
+                            <img src={pImg} alt={p.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="w-6 h-6 text-slate-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-900 dark:text-white text-sm">{p.name || p.title}</p>
+                          <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                            Category: <span className="font-bold text-slate-700 dark:text-slate-300">{p.category || "General"}</span>
+                          </p>
+                          <p className="text-[11px] text-slate-500 font-bold mt-0.5">
+                            Price: <span className="text-emerald-600 font-black">₹{p.price}</span>
+                            {p.mrp && Number(p.mrp) > Number(p.price) && (
+                              <span className="line-through text-slate-400 ml-1.5 font-normal">₹{p.mrp}</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 self-end sm:self-center">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                          stockNum > 10 ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" :
+                          stockNum > 0 ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" :
+                          "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                        }`}>
+                          {stockNum > 10 ? `Stock: ${stockNum} units` : stockNum > 0 ? `Low Stock (${stockNum})` : "Out of Stock"}
+                        </span>
+                        
+                        <span className="px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase">
+                          {p.status || "Live"}
+                        </span>
+                      </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase">
-                      Cataloged
-                    </span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
