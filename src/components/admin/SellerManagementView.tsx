@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { apiService } from "@/services/apiService";
 import { 
   Building2, 
   CheckCircle2, 
@@ -27,7 +28,8 @@ import {
   ShoppingBag,
   User,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Unlock
 } from "lucide-react";
 import { exportCustomDataExcel } from "@/utils/excelExport";
 
@@ -51,6 +53,15 @@ export default function SellerManagementView() {
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"directory" | "logs">("directory");
   const [statusMessage, setStatusMessage] = useState("");
+
+  // Custom Admin Action Modal States
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [showSoftDeleteModal, setShowSoftDeleteModal] = useState(false);
+  const [showPermanentDeleteModal, setShowPermanentDeleteModal] = useState(false);
+  const [adminPasswordConfirm, setAdminPasswordConfirm] = useState("");
+  const [confirmDeleteText, setConfirmDeleteText] = useState("");
+  const [suspensionReasonText, setSuspensionReasonText] = useState("");
+  const [deletionReasonText, setDeletionReasonText] = useState("");
 
   // Activity audit logs
   const [logs, setLogs] = useState<any[]>([]);
@@ -200,22 +211,87 @@ export default function SellerManagementView() {
     }
   };
 
-  const handleDeleteSellerPermanently = async (sellerId: string, sellerName: string) => {
-    if (!confirm(`Are you sure you want to permanently delete seller "${sellerName}"? All profile data and listings will be purged.`)) {
-      return;
-    }
-
-    setActioningId(sellerId);
+  const handleSuspendSellerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetSellerId || !suspensionReasonText.trim()) return;
+    setActioningId(targetSellerId);
     try {
-      const { error } = await supabase.from("sellers").delete().eq("id", sellerId);
-      if (error) throw error;
-
-      setStatusMessage(`🗑️ Seller "${sellerName}" permanently deleted.`);
-      if (selectedSeller?.id === sellerId) setSelectedSeller(null);
+      const res = await apiService.suspendSeller(targetSellerId, suspensionReasonText.trim());
+      if (res.error) throw new Error(res.error);
+      
+      setStatusMessage("✅ Seller suspended successfully.");
+      setShowSuspendModal(false);
+      setSuspensionReasonText("");
+      setTargetSellerId(null);
       await loadData();
     } catch (err: any) {
-      console.error("Failed to delete seller:", err);
-      setStatusMessage(`❌ Error deleting seller: ${err.message}`);
+      console.error(err);
+      alert(err.message || "Failed to suspend seller.");
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleReactivateSeller = async (sellerId: string) => {
+    if (!confirm("Are you sure you want to reactivate this seller?")) return;
+    setActioningId(sellerId);
+    try {
+      const res = await apiService.reactivateSeller(sellerId);
+      if (res.error) throw new Error(res.error);
+      
+      setStatusMessage("✅ Seller reactivated successfully.");
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to reactivate seller.");
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleSoftDeleteSellerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetSellerId || !deletionReasonText.trim()) return;
+    setActioningId(targetSellerId);
+    try {
+      const res = await apiService.softDeleteSeller(targetSellerId, deletionReasonText.trim());
+      if (res.error) throw new Error(res.error);
+      
+      setStatusMessage("✅ Seller soft deleted successfully.");
+      setShowSoftDeleteModal(false);
+      setDeletionReasonText("");
+      setTargetSellerId(null);
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to soft delete seller.");
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handlePermanentDeleteSellerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetSellerId || !adminPasswordConfirm) return;
+    if (confirmDeleteText !== "DELETE") {
+      alert("Please type 'DELETE' to confirm deletion.");
+      return;
+    }
+    setActioningId(targetSellerId);
+    try {
+      const res = await apiService.permanentDeleteSeller(targetSellerId, adminPasswordConfirm);
+      if (res.error) throw new Error(res.error);
+      
+      setStatusMessage("🗑️ Seller account permanently deleted.");
+      setShowPermanentDeleteModal(false);
+      setAdminPasswordConfirm("");
+      setConfirmDeleteText("");
+      setTargetSellerId(null);
+      if (selectedSeller?.id === targetSellerId) setSelectedSeller(null);
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to permanently delete seller.");
     } finally {
       setActioningId(null);
     }
@@ -252,6 +328,7 @@ export default function SellerManagementView() {
     const matchesStatus = 
       filterStatus === "all" || 
       (filterStatus === "pending_delete" && (s.delete_requested || statusVal.includes("delete"))) ||
+      (filterStatus === "deleted" && (s.is_deleted || statusVal === "deleted")) ||
       statusVal === filterStatus.toLowerCase();
       
     const matchesCategory = filterCategory === "all" || categoryVal === filterCategory.toLowerCase();
@@ -263,6 +340,8 @@ export default function SellerManagementView() {
       (s.phone_number || s.mobile_number || "").includes(query) ||
       (s.upi_id || s.phonepay_no || "").toLowerCase().includes(query) ||
       (s.pickup_location || s.city || "").toLowerCase().includes(query) ||
+      (s.gstin || "").toLowerCase().includes(query) ||
+      (s.fssai_license_number || "").toLowerCase().includes(query) ||
       (s.seller_id || s.id || "").toString().includes(query);
 
     return matchesStatus && matchesCategory && matchesSearch;
@@ -369,7 +448,7 @@ export default function SellerManagementView() {
           {/* Status Filter */}
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
             <span className="text-[10px] font-black uppercase text-slate-400 px-3">Status:</span>
-            {(["all", "active", "pending_delete", "suspended"] as const).map((st) => (
+            {(["all", "active", "pending_delete", "suspended", "deleted"] as const).map((st) => (
               <button
                 key={st}
                 onClick={() => setFilterStatus(st)}
@@ -379,7 +458,7 @@ export default function SellerManagementView() {
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
-                {st === "pending_delete" ? "Pending Delete (15 Days)" : st}
+                {st === "pending_delete" ? "Pending Delete (15 Days)" : st === "deleted" ? "Deleted" : st}
               </button>
             ))}
           </div>
@@ -535,7 +614,7 @@ export default function SellerManagementView() {
                           <Package className="w-4 h-4" />
                         </button>
 
-                        {isPendingDelete ? (
+                        {isPendingDelete || seller.is_deleted || seller.account_status === "Deleted" ? (
                           <button
                             onClick={() => handleRestoreAccount(seller.id)}
                             disabled={actioningId === seller.id}
@@ -545,25 +624,52 @@ export default function SellerManagementView() {
                             <RotateCcw className="w-4 h-4" />
                           </button>
                         ) : (
-                          <button
-                            onClick={() => handleUpdateStatus(seller.id, seller.account_status === "Suspended" ? "Active" : "Suspended")}
-                            disabled={actioningId === seller.id}
-                            className={`p-2 rounded-xl transition-colors ${
-                              seller.account_status === "Suspended"
-                                ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                                : "bg-rose-50 text-rose-600 hover:bg-rose-100"
-                            }`}
-                            title={seller.account_status === "Suspended" ? "Re-activate Seller" : "Suspend Seller"}
-                          >
-                            <ShieldAlert className="w-4 h-4" />
-                          </button>
+                          <>
+                            {seller.account_status === "Suspended" || seller.is_suspended ? (
+                              <button
+                                onClick={() => handleReactivateSeller(seller.id)}
+                                disabled={actioningId === seller.id}
+                                className="p-2 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                title="Re-activate Seller"
+                              >
+                                <Unlock className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setTargetSellerId(seller.id);
+                                  setShowSuspendModal(true);
+                                }}
+                                disabled={actioningId === seller.id}
+                                className="p-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                                title="Suspend Seller"
+                              >
+                                <ShieldAlert className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => {
+                                setTargetSellerId(seller.id);
+                                setShowSoftDeleteModal(true);
+                              }}
+                              disabled={actioningId === seller.id}
+                              className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                              title="Soft Delete Seller"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
 
                         <button
-                          onClick={() => handleDeleteSellerPermanently(seller.id, sName)}
+                          onClick={() => {
+                            setTargetSellerId(seller.id);
+                            setShowPermanentDeleteModal(true);
+                          }}
                           disabled={actioningId === seller.id}
-                          className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition-colors"
-                          title="Permanently Delete Seller"
+                          className="p-2 rounded-xl bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 hover:bg-rose-200 transition-colors border border-rose-300"
+                          title="Permanently Delete Seller (IRREVERSIBLE)"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -731,6 +837,203 @@ export default function SellerManagementView() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 🔴 SELLER SUSPENSION REASON MODAL */}
+      {showSuspendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+          <form onSubmit={handleSuspendSellerSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-rose-500" />
+                Suspend Merchant Account
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSuspendModal(false);
+                  setSuspensionReasonText("");
+                  setTargetSellerId(null);
+                }}
+                className="p-2 rounded-full text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase">Suspension Reason *</label>
+              <textarea
+                required
+                rows={3}
+                value={suspensionReasonText}
+                onChange={(e) => setSuspensionReasonText(e.target.value)}
+                placeholder="Enter the official reason for suspending this seller..."
+                className="w-full p-3 text-xs font-bold bg-slate-50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-rose-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSuspendModal(false);
+                  setSuspensionReasonText("");
+                  setTargetSellerId(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={actioningId !== null}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                {actioningId ? "Suspending..." : "Confirm Suspension"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ⚠️ SELLER SOFT DELETION REASON MODAL */}
+      {showSoftDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+          <form onSubmit={handleSoftDeleteSellerSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Soft Delete Merchant Account
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSoftDeleteModal(false);
+                  setDeletionReasonText("");
+                  setTargetSellerId(null);
+                }}
+                className="p-2 rounded-full text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase">Reason for Deletion *</label>
+              <textarea
+                required
+                rows={3}
+                value={deletionReasonText}
+                onChange={(e) => setDeletionReasonText(e.target.value)}
+                placeholder="Enter the reason for deleting this seller account..."
+                className="w-full p-3 text-xs font-bold bg-slate-50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSoftDeleteModal(false);
+                  setDeletionReasonText("");
+                  setTargetSellerId(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={actioningId !== null}
+                className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                {actioningId ? "Deleting..." : "Confirm Soft Delete"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* 🛑 SELLER PERMANENT DELETION MODAL (IRREVERSIBLE) */}
+      {showPermanentDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+          <form onSubmit={handlePermanentDeleteSellerSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-black text-rose-600 dark:text-rose-500 flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-rose-600" />
+                Permanent Delete Account
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPermanentDeleteModal(false);
+                  setAdminPasswordConfirm("");
+                  setConfirmDeleteText("");
+                  setTargetSellerId(null);
+                }}
+                className="p-2 rounded-full text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 rounded-2xl text-rose-800 dark:text-rose-300 text-xs font-bold space-y-1">
+              <p>⚠️ WARNING: This action is permanent and cannot be undone!</p>
+              <p className="font-normal text-[11px] text-rose-600">This will purge all listings, images, inventory, pickup locations, support tickets, settlements, notifications, and auth login sessions from the system.</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Super Admin Password *</label>
+                <input
+                  type="password"
+                  required
+                  value={adminPasswordConfirm}
+                  onChange={(e) => setAdminPasswordConfirm(e.target.value)}
+                  placeholder="Enter your Super Admin password..."
+                  className="w-full px-4 py-2.5 text-xs font-bold bg-slate-50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">
+                  Type <span className="text-rose-600 font-black">DELETE</span> to confirm *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={confirmDeleteText}
+                  onChange={(e) => setConfirmDeleteText(e.target.value)}
+                  placeholder="Type DELETE..."
+                  className="w-full px-4 py-2.5 text-xs font-black bg-slate-50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-rose-500 font-mono text-center tracking-widest text-rose-600"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPermanentDeleteModal(false);
+                  setAdminPasswordConfirm("");
+                  setConfirmDeleteText("");
+                  setTargetSellerId(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={actioningId !== null || confirmDeleteText !== "DELETE"}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                {actioningId ? "Permanently Deleting..." : "DELETE PERMANENTLY"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

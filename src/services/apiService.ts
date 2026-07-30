@@ -26,4 +26,10 @@ export const apiService = {
   updateStoreSetting: (key: string, value: any) => apiFetch('/api/admin/store-settings', { method: 'POST', body: JSON.stringify({ key, value }) }),
   // Media Upload (Supabase A Storage Bucket -> Supabase A)
   uploadBrandingAsset: (fileName: string, fileBufferBase64: string, mimeType?: string) => apiFetch('/api/uploads/admin-branding-asset', { method: 'POST', body: JSON.stringify({ fileName, fileBufferBase64, mimeType }) }),
+
+  // Administrative Seller Controls
+  suspendSeller: (id: string, reason: string) => apiFetch(`/api/admin/sellers/${id}/suspend`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  reactivateSeller: (id: string) => apiFetch(`/api/admin/sellers/${id}/reactivate`, { method: 'POST' }),
+  softDeleteSeller: (id: string, reason: string) => apiFetch(`/api/admin/sellers/${id}/soft-delete`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  permanentDeleteSeller: (id: string, passwordConfirm: string) => apiFetch(`/api/admin/sellers/${id}/permanent-delete`, { method: 'POST', body: JSON.stringify({ passwordConfirm }) }),
 };
