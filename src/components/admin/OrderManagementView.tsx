@@ -14,7 +14,8 @@ import {
   Package, 
   MapPin, 
   CreditCard,
-  User
+  User,
+  Trash2
 } from "lucide-react";
 
 export default function OrderManagementView() {
@@ -54,6 +55,30 @@ export default function OrderManagementView() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const handleDeleteOrder = async (orderId: string | number) => {
+    if (!window.confirm("Are you sure you want to permanently delete this order record? This action cannot be undone.")) return;
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/orders/${orderId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ""}`
+        }
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to delete order.");
+      }
+
+      alert("✅ Order deleted successfully!");
+      setOrders(orders.filter(o => o.id !== orderId));
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(null);
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to delete order.");
+    }
+  };
 
   const handleUpdateOrderStatus = async (orderId: string | number, newStatus: string) => {
     try {
@@ -194,13 +219,20 @@ export default function OrderManagementView() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-right pr-6">
+                      <td className="p-4 text-right pr-6 flex justify-end gap-1.5">
                         <button
                           onClick={() => setSelectedOrder(ord)}
                           className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 transition-colors"
                           title="View Order Details"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteOrder(ord.id)}
+                          className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 text-rose-600 dark:text-rose-400 transition-colors"
+                          title="Delete Order Record"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
@@ -253,6 +285,18 @@ export default function OrderManagementView() {
                 <p className="text-slate-700 dark:text-slate-300">Total Amount: <span className="font-black text-emerald-600 text-sm">₹{selectedOrder.total_amount}</span></p>
                 <p className="text-slate-600 dark:text-slate-400">Payment Method: {selectedOrder.payment_method || "Online"}</p>
                 <p className="text-slate-600 dark:text-slate-400">Payment Status: {selectedOrder.payment_status}</p>
+              </div>
+
+              {/* Delete Order Record */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteOrder(selectedOrder.id)}
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-md transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Order Record
+                </button>
               </div>
             </div>
           </div>
