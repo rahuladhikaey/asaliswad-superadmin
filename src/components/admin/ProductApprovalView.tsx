@@ -17,7 +17,7 @@ import {
 export default function ProductApprovalView() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
-  const [filterTab, setFilterTab] = useState<"pending" | "approved" | "hidden" | "all">("pending");
+  const [filterTab, setFilterTab] = useState<"approved" | "hidden" | "all">("approved");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [actioningId, setActioningId] = useState<string | number | null>(null);
@@ -83,8 +83,7 @@ export default function ProductApprovalView() {
 
   const filteredProducts = products.filter(p => {
     let matchesTab = true;
-    if (filterTab === "pending") matchesTab = p.approval_status === "pending" || p.is_approved === false;
-    else if (filterTab === "approved") matchesTab = p.is_active !== false && (p.approval_status === "approved" || p.is_approved === true || !p.approval_status);
+    if (filterTab === "approved") matchesTab = p.is_active !== false && (p.approval_status === "approved" || p.is_approved === true || !p.approval_status);
     else if (filterTab === "hidden") matchesTab = p.is_active === false;
 
     const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || p.brand?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -96,9 +95,9 @@ export default function ProductApprovalView() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-600">Product Moderation</span>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Product Approvals & Image Review</h1>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Product Catalog & Moderation</h1>
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">
-            Approve seller products, inspect quality & images, hide non-compliant listings, or remove duplicate products.
+            Manage approved marketplace products, review listing details, hide non-compliant products, or delete items.
           </p>
         </div>
       </div>
@@ -106,7 +105,7 @@ export default function ProductApprovalView() {
       {/* Tabs & Search */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
         <div className="flex gap-1.5 overflow-x-auto w-full sm:w-auto no-scrollbar">
-          {(["pending", "approved", "hidden", "all"] as const).map(tab => (
+          {(["approved", "hidden", "all"] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setFilterTab(tab)}
