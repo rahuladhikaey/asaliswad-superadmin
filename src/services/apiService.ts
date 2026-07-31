@@ -32,4 +32,23 @@ export const apiService = {
   reactivateSeller: (id: string) => apiFetch(`/api/admin/sellers/${id}/reactivate`, { method: 'POST' }),
   softDeleteSeller: (id: string, reason: string) => apiFetch(`/api/admin/sellers/${id}/soft-delete`, { method: 'POST', body: JSON.stringify({ reason }) }),
   permanentDeleteSeller: (id: string, passwordConfirm: string) => apiFetch(`/api/admin/sellers/${id}/permanent-delete`, { method: 'POST', body: JSON.stringify({ passwordConfirm }) }),
+
+  // Weekly Settlements & Revenue
+  getSettlements: (params: any = {}) => {
+    const query = new URLSearchParams();
+    Object.keys(params).forEach(k => {
+      if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+        query.append(k, params[k]);
+      }
+    });
+    return apiFetch(`/api/settlements?${query.toString()}`);
+  },
+  getSellerSettlements: (sellerId: string) => apiFetch(`/api/settlements/seller/${sellerId}`),
+  getSettlementDetails: (id: string) => apiFetch(`/api/settlements/details/${id}`),
+  paySettlement: (id: string, data: any) => apiFetch(`/api/settlements/${id}/pay`, { method: 'POST', body: JSON.stringify(data) }),
+  getRevenueSummary: (params: any = {}) => {
+    const query = new URLSearchParams();
+    if (params.sellerId) query.append('sellerId', params.sellerId);
+    return apiFetch(`/api/settlements/revenue/summary?${query.toString()}`);
+  }
 };
