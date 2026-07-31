@@ -14,6 +14,10 @@ const geistMono = Geist_Mono({
 export const metadata = {
 	title: "Super Admin Panel - Asali Swad",
 	description: "Management Dashboard for Asali Swad Spices & Groceries",
+	icons: {
+		icon: "/icon.png",
+		apple: "/icon.png",
+	},
 };
 export default function RootLayout({
 	children,
