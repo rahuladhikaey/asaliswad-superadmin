@@ -49,16 +49,15 @@ export default function AsCardsLoyaltyView() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Real Card Applications from Supabase DB
-      const { data: cardsData, error: cardsErr } = await supabaseAdmin
-        .from("card_applications")
-        .select("*")
-        .order("applied_at", { ascending: false });
-
-      if (cardsErr) {
-        console.warn("Supabase card_applications fetch notice:", cardsErr);
+      // 1. Fetch Real Card Applications from Secure Admin API
+      const cardsRes = await fetch("/api/admin/cards");
+      const cardsJson = await cardsRes.json();
+      if (cardsJson.success) {
+        setApplications(cardsJson.data || []);
+      } else {
+        console.warn("API card_applications fetch notice:", cardsJson.message);
+        setApplications([]);
       }
-      setApplications(cardsData || []);
 
       // 2. Fetch Products
       const { data: pData } = await supabaseAdmin.from("products").select("id, name, price");
@@ -117,12 +116,13 @@ export default function AsCardsLoyaltyView() {
         }
       }
 
-      const { error } = await supabase
-        .from("card_applications")
-        .update(updates)
-        .eq("id", appId);
-
-      if (error) throw error;
+      const response = await fetch("/api/admin/cards", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId, updates })
+      });
+      const resJson = await response.json();
+      if (!resJson.success) throw new Error(resJson.message || "Failed to update status");
 
       setApplications(applications.map(app => app.id === appId ? { ...app, ...updates } : app));
       setStatusMessage(`💳 Card application ${status === "APPROVED" ? `approved! Card No: ${updates.card_number || "existing"}` : `marked as ${status}`} in real-time database.`);
@@ -134,12 +134,13 @@ export default function AsCardsLoyaltyView() {
   const handleUpdateRenewDate = async (appId: string, dateStr: string) => {
     try {
       const expiresAt = new Date(dateStr).toISOString();
-      const { error } = await supabaseAdmin
-        .from("card_applications")
-        .update({ expires_at: expiresAt, updated_at: new Date().toISOString() })
-        .eq("id", appId);
-
-      if (error) throw error;
+      const response = await fetch("/api/admin/cards", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId, updates: { expires_at: expiresAt, updated_at: new Date().toISOString() } })
+      });
+      const resJson = await response.json();
+      if (!resJson.success) throw new Error(resJson.message || "Failed to update expiration date");
 
       setApplications(applications.map(app => app.id === appId ? { ...app, expires_at: expiresAt } : app));
       setStatusMessage("📅 Expiration date updated in real-time database.");
@@ -150,12 +151,13 @@ export default function AsCardsLoyaltyView() {
 
   const handleUpdateCoins = async (appId: string, coinsVal: number) => {
     try {
-      const { error } = await supabaseAdmin
-        .from("card_applications")
-        .update({ coins: coinsVal, updated_at: new Date().toISOString() })
-        .eq("id", appId);
-
-      if (error) throw error;
+      const response = await fetch("/api/admin/cards", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId, updates: { coins: coinsVal, updated_at: new Date().toISOString() } })
+      });
+      const resJson = await response.json();
+      if (!resJson.success) throw new Error(resJson.message || "Failed to update coins");
 
       setApplications(applications.map(app => app.id === appId ? { ...app, coins: coinsVal } : app));
       setStatusMessage("🪙 AS Coins balance updated in database.");
@@ -170,9 +172,10 @@ export default function AsCardsLoyaltyView() {
       const cardNumber = `AS-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
       const expiresAt = new Date(Date.now() + newCardForm.expires_in_days * 24 * 60 * 60 * 1000).toISOString();
 
-      const { data, error } = await supabaseAdmin
-        .from("card_applications")
-        .insert([{
+      const response = await fetch("/api/admin/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: newCardForm.name,
           email: newCardForm.email,
           phone: newCardForm.phone,
@@ -182,11 +185,11 @@ export default function AsCardsLoyaltyView() {
           status: "APPROVED",
           expires_at: expiresAt,
           applied_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
+        })
+      });
+      const resJson = await response.json();
+      if (!resJson.success) throw new Error(resJson.message || "Failed to issue new card");
+      const data = resJson.data;
 
       setShowNewCardModal(false);
       setNewCardForm({ name: "", email: "", phone: "", card_type: "Silver Privilege", coins: 250, expires_in_days: 365 });
