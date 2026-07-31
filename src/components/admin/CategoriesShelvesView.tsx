@@ -161,31 +161,24 @@ export default function CategoriesShelvesView() {
     try {
       let savedCategory: any = null;
       if (editingCategoryId) {
-        const { data, error } = await supabase
-          .from("categories")
-          .update(payload)
-          .eq("id", editingCategoryId)
-          .select();
-
-        if (error) throw error;
-        savedCategory = data?.[0] || { id: editingCategoryId, ...payload };
+        const response = await fetch("/api/admin/categories", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingCategoryId, updates: payload })
+        });
+        const resJson = await response.json();
+        if (!resJson.success) throw new Error(resJson.message || "Failed to update category");
+        savedCategory = resJson.data || { id: editingCategoryId, ...payload };
         setStatusMessage(`✅ Subcategory "${categoryName.trim()}" updated successfully.`);
       } else {
-        // Omit custom id so PostgreSQL auto-generates sequential integer primary key
-        const { data, error } = await supabase
-          .from("categories")
-          .insert([payload])
-          .select();
-
-        if (error) {
-          console.warn("Primary insert error, retrying without select:", error);
-          const { error: retryError } = await supabase
-            .from("categories")
-            .insert([payload]);
-          if (retryError) throw retryError;
-        } else {
-          savedCategory = data?.[0];
-        }
+        const response = await fetch("/api/admin/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const resJson = await response.json();
+        if (!resJson.success) throw new Error(resJson.message || "Failed to save category");
+        savedCategory = resJson.data;
         setStatusMessage(`✨ New subcategory "${categoryName.trim()}" created under ${mainCategory}!`);
       }
 
@@ -220,7 +213,12 @@ export default function CategoriesShelvesView() {
 
     setActioningId(categoryId);
     try {
-      await supabase.from("categories").delete().eq("id", categoryId);
+      const response = await fetch(`/api/admin/categories?id=${categoryId}`, {
+        method: "DELETE"
+      });
+      const resJson = await response.json();
+      if (!resJson.success) throw new Error(resJson.message || "Failed to delete category");
+
       const updated = categories.filter((c) => c.id !== categoryId);
       setCategories(updated);
       if (typeof window !== "undefined") {
@@ -229,8 +227,7 @@ export default function CategoriesShelvesView() {
       setStatusMessage(`🗑️ Category deleted.`);
     } catch (e: any) {
       console.error("Error deleting category:", e);
-      const updated = categories.filter((c) => c.id !== categoryId);
-      setCategories(updated);
+      alert(`❌ Database Error: ${e.message || "Could not delete category"}`);
     } finally {
       setActioningId(null);
     }
@@ -251,12 +248,19 @@ export default function CategoriesShelvesView() {
       { name: "Organic Specials", main_category: "Organic Specials", icon: "🌿" }
     ];
     try {
-      await supabase.from("categories").insert(defaults);
+      const response = await fetch("/api/admin/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(defaults)
+      });
+      const resJson = await response.json();
+      if (!resJson.success) throw new Error(resJson.message || "Failed to seed categories");
+      
       setStatusMessage("✅ 11 Real Shop Categories seeded to production database!");
       loadData();
     } catch (err: any) {
       console.warn("Notice seeding categories:", err);
-      setCategories(defaults.map((d, i) => ({ id: i + 1, ...d })));
+      alert(`❌ Seeding Error: ${err.message}`);
     }
   };
 
