@@ -38,6 +38,7 @@ export default function CategoriesShelvesView() {
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [actioningId, setActioningId] = useState<number | null>(null);
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   const loadData = async () => {
     setLoading(true);
@@ -459,8 +460,13 @@ export default function CategoriesShelvesView() {
                   <div className="flex items-center gap-3">
                     {/* Square Picture or Emoji */}
                     <div className="h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-sm overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
-                      {c.image_url ? (
-                        <img src={c.image_url} alt={c.name} className="h-full w-full object-cover" />
+                      {c.image_url && !brokenImages[c.id] ? (
+                        <img 
+                          src={c.image_url} 
+                          alt={c.name} 
+                          className="h-full w-full object-cover" 
+                          onError={() => setBrokenImages(prev => ({ ...prev, [c.id]: true }))}
+                        />
                       ) : (
                         <span>{getCategoryIcon(c.name).value}</span>
                       )}
