@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { getCategoryIcon } from "@/utils/categoryIcons";
 import { exportCategoriesExcel } from "@/utils/excelExport";
-import { uploadToSupabaseBucket } from "@shared/services";
+import { uploadToSupabaseBucket, uploadToCloudinary } from "@shared/services";
 
 const MAIN_CATEGORIES = ["Grocery", "Bakery", "Snacks", "Spices", "Oils & Ghee", "Organic Specials"];
 
@@ -139,13 +139,9 @@ export default function CategoriesShelvesView() {
     let finalImageUrl = imagePreview || null;
     if (imagePreview && imagePreview.startsWith("data:")) {
       try {
-        finalImageUrl = await uploadToSupabaseBucket(
-          "categories", 
-          imagePreview, 
-          `cat_${Date.now()}_${categoryName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-")}.jpg`
-        );
+        finalImageUrl = await uploadToCloudinary(imagePreview);
       } catch (err) {
-        console.warn("Category Supabase bucket upload notice:", err);
+        console.warn("Category Cloudinary upload notice:", err);
       }
     }
 
