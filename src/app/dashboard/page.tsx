@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Logo from "@/assets/images/official-logo.png";
 import { supabase } from "@/lib/supabaseClient";
 import type { Product } from "@/types/products";
 import type { Category } from "@/types/categories";
@@ -122,9 +124,11 @@ export default function AdminPage() {
       {/* Sidebar */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex flex-col transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex items-center gap-3 h-20 px-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
-          <div className="h-10 w-10 shrink-0 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/20">
-            <span className="text-white font-black text-xs">AS</span>
-          </div>
+          <Image
+            src={Logo}
+            alt="Asali Swad Admin Logo"
+            className="h-10 w-10 shrink-0 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-md"
+          />
           <div className="min-w-0">
             <h1 className="text-sm font-black tracking-tight text-slate-900 dark:text-white uppercase truncate">Super Admin</h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{adminUser}</p>
